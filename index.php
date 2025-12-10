@@ -117,7 +117,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     <p>
                         Server sedang menjalani perawatan rutin untuk meningkatkan performa dan fitur baru. 
                         Jangan khawatir, kami akan segera kembali!
-                        <br>Sambil menunggu, yuk main game sebentar di sebelah! 👉
+                        <br>Sambil menunggu, yuk main game sebentar di sebelah! ðŸ‘‰
                     </p>
 
                     <div class="countdown">
@@ -310,7 +310,7 @@ if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 5) {
     $lockout_time = $_SESSION['lockout_time'] ?? 0;
     if (time() - $lockout_time < 900) { // 900 detik = 15 Menit
         die("<div style='text-align:center;padding:50px;font-family:sans-serif;'>
-                <h1>⛔ Akses Dibatasi</h1>
+                <h1>â›” Akses Dibatasi</h1>
                 <p>Terlalu banyak percobaan login gagal.</p>
                 <p>Silakan coba lagi dalam 15 menit.</p>
              </div>");
