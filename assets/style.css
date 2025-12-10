@@ -1,101 +1,223 @@
-/* --- HERO SLIDER PREMIUM --- */
+/* =========================================
+   1. RESET & BASIC SETUP
+   ========================================= */
+:root {
+    --primary: #e50914; /* Merah Netflix */
+    --bg-dark: #0f1014;
+    --bg-card: #1b1e26;
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; outline: none; }
+body { background: var(--bg-dark); color: var(--text-main); font-size: 14px; overflow-x: hidden; }
+a { text-decoration: none; color: inherit; transition: 0.3s; }
+ul { list-style: none; }
+
+/* Container Utama */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; }
+.fade-in { animation: fadeIn 0.5s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* =========================================
+   2. NAVBAR & HEADER
+   ========================================= */
+.navbar {
+    height: 70px; background: rgba(15, 16, 20, 0.95); backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.nav-content { display: flex; justify-content: space-between; align-items: center; height: 100%; }
+
+.brand { display: flex; align-items: center; gap: 10px; font-size: 1.5rem; font-weight: 800; color: var(--primary); letter-spacing: -1px; }
+.brand span { color: white; }
+
+.search-wrapper { position: relative; width: 400px; }
+.search-wrapper input {
+    width: 100%; background: #000; border: 1px solid #333; padding: 10px 15px 10px 40px;
+    border-radius: 50px; color: white; font-size: 0.9rem; transition: 0.3s;
+}
+.search-wrapper input:focus { border-color: var(--primary); width: 100%; }
+.search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #666; }
+
+.btn-login {
+    background: var(--primary); color: white; padding: 8px 20px; border-radius: 5px;
+    font-weight: 600; font-size: 0.9rem; transition: 0.2s;
+}
+.btn-login:hover { background: #b2070f; transform: translateY(-2px); }
+
+/* =========================================
+   3. HERO SLIDER (BANNER BESAR)
+   ========================================= */
 .hero-slider {
     width: 100%; height: 500px; border-radius: 16px; overflow: hidden;
-    position: relative; margin-bottom: 40px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: relative; margin-top: 20px; margin-bottom: 40px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
 }
-.hero-bg {
+.hero-card {
     width: 100%; height: 100%; background-size: cover; background-position: center top;
-    position: relative; transform: scale(1.05); transition: 10s;
-}
-.hero-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to right, #0f1014 30%, rgba(15,16,20,0.8) 60%, rgba(15,16,20,0.2) 100%);
+    position: relative;
 }
 .hero-content {
-    position: absolute; top: 50%; left: 60px; transform: translateY(-50%);
-    max-width: 600px; z-index: 2;
+    position: absolute; inset: 0;
+    background: linear-gradient(to right, #0f1014 30%, rgba(15,16,20,0.8) 60%, rgba(15,16,20,0.2) 100%);
+    display: flex; flex-direction: column; justify-content: center; padding-left: 60px;
 }
 .hero-content h1 {
     font-size: 3.5rem; font-weight: 800; line-height: 1.1; margin: 15px 0;
-    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    text-shadow: 0 4px 10px rgba(0,0,0,0.8); max-width: 600px; color: white;
 }
-.badge-hero {
-    display: inline-block; background: var(--primary); color: white;
-    padding: 5px 15px; border-radius: 50px; font-weight: bold; font-size: 0.85rem;
-    box-shadow: 0 0 15px var(--primary);
+.hero-desc {
+    color: #ccc; font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px;
+    max-width: 500px; display: -webkit-box; -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical; overflow: hidden;
 }
-.hero-meta { color: #ccc; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500; }
-.hero-desc { color: #aaa; line-height: 1.6; margin-bottom: 30px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.hero-actions { display: flex; gap: 15px; }
+.badge { display: inline-block; padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; }
 
-/* Buttons */
-.btn-lg { padding: 12px 35px; font-size: 1.1rem; border-radius: 50px; }
-.btn-glass {
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-    color: white; backdrop-filter: blur(10px); cursor: pointer; transition: 0.3s;
-}
-.btn-glass:hover { background: rgba(255,255,255,0.2); }
+/* Swiper Dots */
+.swiper-pagination-bullet { background: white; opacity: 0.5; }
+.swiper-pagination-bullet-active { background: var(--primary); opacity: 1; width: 20px; border-radius: 10px; }
 
-/* --- HISTORY HORIZONTAL SCROLL --- */
-.horizontal-scroll {
-    display: flex; gap: 15px; overflow-x: auto; padding-bottom: 20px;
-    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
-}
-.horizontal-scroll::-webkit-scrollbar { height: 6px; }
-.horizontal-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+/* =========================================
+   4. MOVIE GRID & CARDS (FIX GAMBAR)
+   ========================================= */
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-left: 4px solid var(--primary); padding-left: 15px; }
+.section-title { font-size: 1.5rem; font-weight: 700; margin: 0; }
 
-.history-card {
-    min-width: 200px; max-width: 200px; background: #1b1e26; border-radius: 10px;
-    overflow: hidden; text-decoration: none; transition: 0.3s;
-    border: 1px solid rgba(255,255,255,0.05);
+.movie-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px;
 }
-.history-card:hover { transform: translateY(-5px); border-color: var(--primary); }
-.h-img { position: relative; height: 110px; overflow: hidden; }
-.h-img img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); }
-.h-overlay {
+.movie-card {
+    display: block; position: relative; transition: 0.3s;
+    background: transparent; border-radius: var(--radius);
+}
+.movie-card:hover { transform: translateY(-5px); z-index: 2; }
+
+/* FIX ASPECT RATIO GAMBAR AGAR TIDAK HILANG */
+.card-img-wrap {
+    position: relative;
+    width: 100%;
+    padding-top: 142%; /* Rasio Poster Film (2:3) */
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #1a1a1a; /* Placeholder abu-abu */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.card-img-wrap img {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    transition: 0.3s;
+}
+.movie-card:hover img { transform: scale(1.1); filter: brightness(0.6); }
+
+/* Rating Badge */
+.rating-badge {
+    position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8);
+    color: #ffd700; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold;
+    backdrop-filter: blur(4px); z-index: 2; border: 1px solid rgba(255,215,0,0.3);
+}
+
+/* History Tag */
+.eps-tag {
+    position: absolute; bottom: 10px; right: 10px;
+    background: var(--primary); color: white; padding: 4px 8px;
+    border-radius: 4px; font-size: 0.75rem; font-weight: bold; z-index: 2;
+}
+.progress-bar-mini {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: rgba(255,255,255,0.3); z-index: 2;
+}
+.progress-bar-mini div { background: var(--primary); height: 100%; }
+
+/* Play Icon Overlay */
+.card-overlay {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 2rem; color: white; opacity: 0; transition: 0.3s;
+    opacity: 0; transition: 0.3s; z-index: 3;
 }
-.history-card:hover .h-overlay { opacity: 1; background: rgba(0,0,0,0.5); }
-.h-info { padding: 12px; }
-.h-info h4 { margin: 0 0 5px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ddd; }
-.h-info span { font-size: 0.75rem; color: var(--primary); }
-.progress-line { width: 100%; height: 3px; background: #333; margin-top: 8px; border-radius: 2px; }
-.progress-line div { height: 100%; background: var(--primary); border-radius: 2px; }
+.play-button {
+    width: 50px; height: 50px; background: var(--primary); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white;
+    box-shadow: 0 0 20px rgba(229, 9, 20, 0.6); transform: scale(0.5); transition: 0.3s;
+}
+.movie-card:hover .card-overlay { opacity: 1; }
+.movie-card:hover .play-button { transform: scale(1); }
 
-/* --- GENRE PILLS --- */
-.tags-wrapper { margin-bottom: 30px; position: relative; }
-.tags-wrapper::after {
-    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 50px;
-    background: linear-gradient(to left, var(--bg-dark), transparent); pointer-events: none;
+.card-detail { padding: 10px 0; }
+.card-detail h3 {
+    font-size: 0.95rem; font-weight: 600; color: #ddd; margin: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tags-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
-.tags-scroll::-webkit-scrollbar { display: none; }
+
+/* =========================================
+   5. GENRE PILLS (SCROLL)
+   ========================================= */
+.tags-scroll-container {
+    margin-bottom: 30px; overflow-x: auto; white-space: nowrap;
+    padding-bottom: 5px; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+.tags-scroll-container::-webkit-scrollbar { display: none; } /* Chrome */
+
 .tag-pill {
-    white-space: nowrap; padding: 10px 20px; background: rgba(255,255,255,0.08);
-    border-radius: 50px; color: #ccc; font-size: 0.9rem; text-decoration: none;
-    border: 1px solid transparent; transition: 0.3s;
+    display: inline-block; padding: 10px 25px; border-radius: 50px;
+    background: rgba(255,255,255,0.08); color: #ccc; margin-right: 10px; text-decoration: none;
+    font-size: 0.95rem; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1);
 }
-.tag-pill:hover { background: var(--primary); color: white; border-color: var(--primary); }
-
-/* --- CARD HOVER EFFECT --- */
-.movie-card { transition: 0.3s; position: relative; }
-.movie-card:hover { transform: scale(1.03); z-index: 5; }
-.movie-card:hover .card-img-wrap img { filter: brightness(0.4); }
-.play-icon {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
-    font-size: 3rem; color: var(--primary); opacity: 0; transition: 0.3s;
+.tag-pill:hover {
+    background: var(--primary); color: white; border-color: var(--primary);
+    transform: translateY(-3px); box-shadow: 0 5px 15px rgba(229, 9, 20, 0.3);
 }
-.movie-card:hover .play-icon { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-/* --- RESPONSIVE MOBILE --- */
+/* =========================================
+   6. BUTTONS & COMPONENTS
+   ========================================= */
+.btn { padding: 10px 25px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; text-decoration: none; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #b2070f; }
+.btn-secondary { background: #333; color: white; }
+.btn-secondary:hover { background: #444; }
+
+.pagination { margin-top: 50px; display: flex; justify-content: center; gap: 15px; }
+.pagination a {
+    display: inline-block; padding: 10px 20px; background: #1b1e26; color: white;
+    border-radius: 8px; font-weight: 600; border: 1px solid #333; transition: 0.3s;
+}
+.pagination a:hover { background: var(--primary); border-color: var(--primary); }
+
+/* =========================================
+   7. FOOTER
+   ========================================= */
+.site-footer { background: #000; padding: 50px 0 20px; margin-top: 50px; border-top: 1px solid #222; }
+.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; }
+.footer-col h4 { color: white; margin-bottom: 20px; font-size: 1.1rem; }
+.footer-col ul li { margin-bottom: 10px; }
+.footer-col ul li a { color: #888; font-size: 0.9rem; }
+.footer-col ul li a:hover { color: var(--primary); }
+.copyright { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #222; color: #555; font-size: 0.85rem; }
+
+/* =========================================
+   8. RESPONSIVE MOBILE
+   ========================================= */
 @media (max-width: 768px) {
-    .hero-slider { height: 500px; margin-left: -20px; width: 100vw; border-radius: 0; }
-    .hero-overlay { background: linear-gradient(to top, #0f1014 10%, rgba(15,16,20,0.6) 100%); }
-    .hero-content { left: 20px; bottom: 40px; top: auto; transform: none; width: 90%; }
-    .hero-content h1 { font-size: 2rem; }
-    .hero-desc { display: none; } /* Hide desc on mobile */
+    /* Navbar */
+    .navbar { height: 60px; padding: 0 15px; }
+    .search-wrapper { display: none; } /* Sembunyikan search bar di header HP */
+    .btn-login { padding: 6px 15px; font-size: 0.8rem; }
+
+    /* Hero Slider */
+    .hero-slider {
+        height: 500px; border-radius: 0; width: 100vw; margin-left: -20px;
+        margin-top: 0; border: none;
+    }
+    .hero-content {
+        padding: 20px; justify-content: flex-end; padding-bottom: 60px;
+        background: linear-gradient(to top, #0f1014 10%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%);
+    }
+    .hero-content h1 { font-size: 2rem; max-width: 100%; text-shadow: 0 2px 5px black; }
+    .hero-desc { display: none; } /* Deskripsi disembunyikan di HP */
     
+    /* Grid */
     .movie-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    
+    /* Footer */
+    .footer-grid { grid-template-columns: 1fr; text-align: center; gap: 30px; }
 }
