@@ -53,6 +53,53 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
     
     <link rel="stylesheet" href="/assets/style.css?v=<?= time() ?>">
+
+
+<script>
+    // 1. Matikan Shortcut Tombol (F12, Ctrl+U, Ctrl+Shift+I, dll)
+    document.addEventListener('keydown', function(e) {
+        if (
+            e.keyCode === 123 || // F12
+            (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I (Inspect)
+            (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J (Console)
+            (e.ctrlKey && e.keyCode === 85) || // Ctrl+U (View Source)
+            (e.ctrlKey && e.keyCode === 83)    // Ctrl+S (Save)
+        ) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+
+    // 2. Deteksi Jika DevTools Terbuka (Metode Deteksi Ukuran Layar)
+    (function() {
+        const threshold = 160; // Toleransi ukuran panel inspect
+        
+        const checkDevTools = () => {
+            // Cek selisih ukuran window luar dan dalam
+            const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+            const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+            
+            // Jika selisihnya besar, berarti ada panel Inspect terbuka
+            if (widthThreshold || heightThreshold) {
+                try {
+                    // HUKUMAN: Redirect ke halaman kosong atau tutup tab
+                    // Ini akan terjadi SETELAH user klik "Inspect" di menu klik kanan
+                    window.location.href = "about:blank";
+                    document.body.innerHTML = "";
+                } catch (err) {}
+            }
+        };
+
+        // Cek secara berkala (setiap 500ms)
+        setInterval(checkDevTools, 500);
+        window.addEventListener('resize', checkDevTools);
+    })();
+    
+    // BAGIAN "document.addEventListener('contextmenu'...)" SUDAH DIHAPUS
+    // Sekarang Klik Kanan bisa digunakan.
+    </script>
+
 </head>
 <body>
     
