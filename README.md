@@ -70,90 +70,87 @@
 
 ---
 
-## ⚙️ Instalasi
+## ⚙️ Instalasi & Konfigurasi
 
-1. Clone repository:
-   ```bash
-   git clone https://github.com/username/nama-repo.git
-   ```
+### 1. **Persiapan Database**
+Buat database baru di MySQL, contoh: `dramaflix_db`.
 
-2. Upload ke server / hosting Anda.
+Buat tabel berikut:
 
-3. Pastikan `.htaccess` aktif agar routing bekerja optimal.
+**users**  
+(id, username, password, role, active_until, created_at)
 
-4. Sesuaikan konfigurasi aplikasi di:
-   ```
-   app/Config.php
-   ```
+**history**  
+(id, user_id, book_id, title, cover, episode, total_eps, updated_at)
 
-5. Jika menggunakan database, sesuaikan kredensial di:
-   ```
-   app/Database.php
-   ```
+**plans**  
+(id, name, price, duration, features)
 
-6. Pastikan server menggunakan PHP **7.4+**.
+**favorites** (opsional)
 
 ---
 
-## 📡 Cara Kerja Downloader
+### 2. **Konfigurasi Koneksi**
+Edit file:
 
-1. Pengguna menyalin URL video dari platform sosial.
-2. Menempelkannya ke input utama di homepage.
-3. Sistem memproses URL melalui API Handler.
-4. Link unduhan tersedia dalam beberapa detik.
-
-Semua proses parsing dilakukan oleh:
 ```
-app/ApiHandler.php
+app/Database.php
 ```
 
----
-
-## 🖥 Teknologi yang Digunakan
-
-- PHP Native (tanpa framework)
-- HTML5, CSS, JavaScript
-- PWA (Service Worker + Manifest)
-- Apache rewrite untuk routing
-- SEO Optimization (robots.txt, sitemap)
+Isi kredensial database Anda.
 
 ---
 
-## 📱 PWA Support
-
-Aplikasi dapat di-install layaknya aplikasi mobile:
-
-- `manifest.json` mengatur tampilan ikon dan metadata aplikasi.
-- `sw.js` mengelola caching untuk loading cepat.
-
----
-
-## 🔐 Keamanan
-
-- Validasi input URL sebelum diproses.
-- `.htaccess` membatasi akses langsung ke file sensitif.
-- API Handler dibatasi untuk jenis request tertentu.
+### 3. **Setup Folder Backup**
+```
+mkdir backups
+chmod 755 backups
+```
 
 ---
 
-## 🛠 Catatan Pengembangan
+### 4. **Konfigurasi Web Server**
+Pastikan **mod_rewrite aktif**.
 
-Struktur aplikasi mudah diperluas ke fitur tambahan seperti:
+`.htaccess` sudah mengatur:
 
-- Konversi video ke MP3
-- Riwayat download
-- Shortlink generator
-- Penjadwalan unduhan
+- HTTPS Enforcement (HSTS)
+- Clean URL tanpa `.php`
+- Gzip Compression
+- Cache Control
+
+---
+
+### 5. **Maintenance Mode (Opsional)**
+
+Edit:
+
+```php
+const MAINTENANCE_MODE = true;
+```
+
+---
+
+## 🛡️ Keamanan
+
+DramaFlix menerapkan perlindungan berikut:
+
+- **SQL Injection Protection** via PDO Prepared Statement  
+- **XSS Filtering & Output Escaping**  
+- **Brute Force Prevention** pada login  
+- **Secure Headers** (CSP, HSTS, X-Frame-Options)  
+- **Secure Session Handling**
 
 ---
 
 ## 🤝 Kontribusi
 
-Kontribusi terbuka!  
-Silakan buat **Issue** atau **Pull Request** untuk perbaikan bug, penambahan fitur, atau optimasi performa.
+Kontribusi sangat diterima!  
+Silakan fork, buat fitur baru, atau kirim Pull Request.
 
 ---
 
-## 📄 Lisensi
+## 📝 Lisensi
 
-Silakan tentukan lisensi sesuai kebutuhan (MIT / GPL / Proprietary).
+Dibuat untuk edukasi dan pengembangan. Bebas digunakan & dimodifikasi.
+
