@@ -103,5 +103,61 @@
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
     </script>
+    
+    <script>
+(function() {
+    // 1. BLOKIR SHORTCUT KEYBOARD (Ctrl+U, F12, Ctrl+Shift+I)
+    document.onkeydown = function(e) {
+        if (
+            e.keyCode === 123 || // F12
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
+            (e.ctrlKey && e.keyCode === 85) // Ctrl+U (View Source)
+        ) {
+            e.preventDefault(); // Batalkan aksi default
+            return false;
+        }
+    };
+
+    // 2. JEBAKAN DEBUGGER (AUTO-CLOSE JIKA INSPECT ELEMENT DIBUKA)
+    function detectDevTool(allow) {
+        if(isNaN(+allow)) allow = 100;
+        var start = +new Date(); 
+        
+        // Browser akan berhenti disini jika DevTools/Inspect Element nyala
+        debugger; 
+        
+        var end = +new Date(); 
+        
+        // Jika ada jeda waktu (artinya user sedang membuka Inspect Element)
+        if(isNaN(start) || isNaN(end) || end - start > allow) {
+            // AKSI: Hapus konten website dan ganti jadi kosong
+            document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:black;color:red;font-size:2rem;font-weight:bold;">AKSES DITOLAK</div>';
+            
+            // Redirect paksa ke halaman kosong untuk "menutup" akses
+            window.location.href = "about:blank"; 
+        }
+    }
+
+    // Jalankan pengecekan terus menerus saat user menggerakkan mouse atau resize layar
+    if(window.attachEvent) {
+        if (document.readyState === "complete" || document.readyState === "interactive") {
+            detectDevTool();
+            window.attachEvent('onresize', detectDevTool);
+            window.attachEvent('onmousemove', detectDevTool);
+            window.attachEvent('onfocus', detectDevTool);
+            window.attachEvent('onblur', detectDevTool);
+        } else {
+            setTimeout(argument.callee, 0);
+        }
+    } else {
+        window.addEventListener('load', detectDevTool);
+        window.addEventListener('resize', detectDevTool);
+        window.addEventListener('mousemove', detectDevTool);
+        window.addEventListener('focus', detectDevTool);
+        window.addEventListener('blur', detectDevTool);
+    }
+})();
+</script>
+    
 </body>
 </html>
