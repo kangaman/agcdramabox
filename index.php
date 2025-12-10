@@ -3,8 +3,9 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
-// 2. KOMPRESI HALAMAN (Agar website ngebut)
-if (substr_count($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip')) ob_start("ob_gzhandler"); else ob_start();
+// 2. BUFFERING OUTPUT
+// Kita gunakan ob_start() biasa (bukan gzhandler) agar bisa kita manipulasi (enkripsi) isinya nanti
+ob_start();
 
 // 3. SECURITY HEADERS & CACHE CONTROL
 header("X-Frame-Options: SAMEORIGIN");
@@ -17,7 +18,6 @@ header("Pragma: no-cache");
 
 // 4. LOAD CONFIG (Untuk Cek Maintenance)
 require_once 'app/Config.php';
-
 
 // --- FITUR MAINTENANCE MODE ---
 // Pastikan 'const MAINTENANCE_MODE = true;' ada di app/Config.php
@@ -159,8 +159,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
 
             <script>
                 // 1. COUNTDOWN TIMER LOGIC
-                // Set waktu selesai maintenance (Contoh: 2 jam dari sekarang)
-                // Dalam real case, Anda bisa set timestamp spesifik
                 let endTime = new Date().getTime() + (24 * 60 * 60 * 1000); 
 
                 setInterval(function() {
@@ -168,7 +166,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     let dist = endTime - now;
 
                     if (dist < 0) {
-                        // Reset waktu jika habis (Simulation)
                         endTime = new Date().getTime() + (24 * 60 * 60 * 1000);
                         dist = endTime - now;
                     }
@@ -221,7 +218,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     else if(key == 40 && d != "UP") d = "DOWN";
                 }
                 
-                // Fungsi untuk tombol HP
                 function changeDir(dir) {
                     if(dir == "LEFT" && d != "RIGHT") d = "LEFT";
                     else if(dir == "UP" && d != "DOWN") d = "UP";
@@ -230,17 +226,17 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                 }
 
                 function draw() {
-                    ctx.fillStyle = "#111"; // Background board
+                    ctx.fillStyle = "#111"; 
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     for(let i = 0; i < snake.length; i++) {
-                        ctx.fillStyle = (i == 0) ? "#e50914" : "#fff"; // Kepala Merah, Badan Putih
+                        ctx.fillStyle = (i == 0) ? "#e50914" : "#fff"; 
                         ctx.fillRect(snake[i].x, snake[i].y, box, box);
                         ctx.strokeStyle = "#000";
                         ctx.strokeRect(snake[i].x, snake[i].y, box, box);
                     }
 
-                    ctx.fillStyle = "#4ade80"; // Makanan Hijau
+                    ctx.fillStyle = "#4ade80"; 
                     ctx.fillRect(food.x, food.y, box, box);
 
                     let snakeX = snake[0].x;
@@ -251,7 +247,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     if(d == "RIGHT") snakeX += box;
                     if(d == "DOWN") snakeY += box;
 
-                    // Makan
                     if(snakeX == food.x && snakeY == food.y) {
                         score++;
                         scoreEl.innerText = score;
@@ -260,7 +255,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                         snake.pop();
                     }
 
-                    // Game Over Logic
                     let newHead = { x: snakeX, y: snakeY };
 
                     if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
@@ -284,10 +278,9 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                 function startGame() {
                     overlay.style.display = "none";
                     initGame();
-                    // Set default gerak ke kanan biar gak diem
                     d = "RIGHT"; 
                     if(game) clearInterval(game);
-                    game = setInterval(draw, 190); // Kecepatan game (makin kecil makin cepat)
+                    game = setInterval(draw, 190);
                 }
             </script>
         </body>
@@ -296,10 +289,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
         exit; // Hentikan script
     }
 }
-
-
-
-
 
 // 5. SESSION SECURITY & RATE LIMITING
 ini_set('session.cookie_httponly', 1);
@@ -387,6 +376,7 @@ if ($page === 'logout') {
 // =========================================================
 
 // A. ROUTE DASHBOARD (Proteksi Login)
+// Halaman Dashboard JANGAN dienkripsi agar tidak rusak fungsi form-nya
 if (strpos($page, 'dashboard') === 0) {
     if (!isset($_SESSION['user_id'])) {
         setFlash('warning', 'Akses Ditolak', 'Silakan login terlebih dahulu.');
@@ -397,7 +387,7 @@ if (strpos($page, 'dashboard') === 0) {
     $parts = explode('/', $page);
     $view = $parts[1] ?? 'overview';
     
-    // Fix Routing untuk halaman dengan parameter &
+    // Fix Routing untuk halaman dengan parameter
     if (strpos($view, 'user_form') !== false) $view = 'user_form';
     
     include 'views/dashboard/layout.php';
@@ -462,7 +452,10 @@ switch($page) {
         break;
 
     // --- API BACKEND (AJAX) ---
+    // API Tidak boleh dienkripsi karena harus return JSON murni
     case 'api_save_history':
+        // Bersihkan buffer sebelumnya agar tidak ada HTML nyangkut
+        ob_end_clean(); 
         header('Content-Type: application/json');
         
         if (!isset($_SESSION['user_id'])) {
@@ -503,5 +496,29 @@ if ($page !== 'login' && $page !== 'register') {
     include 'views/footer.php';
 }
 
-ob_end_flush();
+// =========================================================
+// PROSES ENKRIPSI HTML (VIEW SOURCE PROTECTION)
+// =========================================================
+
+$html_content = ob_get_clean(); // Ambil semua output HTML yang sudah di-load
+
+// Pengecualian: Jangan enkripsi Login, Register, atau API
+// Kita hanya mengenkripsi halaman PUBLIC (Home, Watch, Search, Terms, Privacy)
+$is_exempt = in_array($page, ['login', 'register', 'api_save_history']) || strpos($page, 'dashboard') === 0;
+
+if ($is_exempt) {
+    // Jika halaman exempt, tampilkan normal
+    echo $html_content;
+} else {
+    // Jika halaman publik, enkripsi menjadi HEX
+    $encrypted = '';
+    $len = strlen($html_content);
+    for ($i = 0; $i < $len; $i++) {
+        $encrypted .= '%' . bin2hex($html_content[$i]);
+    }
+    
+    // Output Script Decoder untuk Browser
+    // Ini akan membuat View Source hanya berisi kode Javascript acak
+    echo '<script type="text/javascript">document.write(unescape("' . $encrypted . '"));</script>';
+}
 ?>
