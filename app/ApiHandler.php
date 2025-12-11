@@ -63,7 +63,7 @@ class ApiHandler {
     // 1. GET HOME (Updated)
     public function getHome($page = 1, $source = 'dramabox') {
         if ($source === 'melolo') {
-            $limit = 10; 
+            $limit = 20; 
             $endpoint = 'latest';
             if ($page > 1) { $offset = ($page - 1) * $limit; $endpoint .= "?limit={$limit}&offset={$offset}"; }
             $rawData = $this->requestMelolo($endpoint);
@@ -103,7 +103,7 @@ class ApiHandler {
     // 2. SEARCH (Updated)
     public function search($query, $page = 1, $source = 'dramabox') {
         if ($source === 'melolo') {
-            $limit = 10; $offset = ($page - 1) * $limit;
+            $limit = 20; $offset = ($page - 1) * $limit;
             $endpoint = 'search?query=' . rawurlencode($query) . "&limit={$limit}&offset={$offset}";
             $rawData = $this->requestMelolo($endpoint);
             
