@@ -4,7 +4,6 @@ error_reporting(0);
 ini_set('display_errors', 0);
 
 // 2. BUFFERING OUTPUT
-// Kita gunakan ob_start() biasa (bukan gzhandler) agar bisa kita manipulasi (enkripsi) isinya nanti
 ob_start();
 
 // 3. SECURITY HEADERS & CACHE CONTROL
@@ -12,7 +11,6 @@ header("X-Frame-Options: SAMEORIGIN");
 header("X-XSS-Protection: 1; mode=block");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: strict-origin-when-cross-origin");
-// Paksa browser cek data terbaru (Penting untuk Dashboard/Status VIP)
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 
@@ -159,6 +157,8 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
 
             <script>
                 // 1. COUNTDOWN TIMER LOGIC
+                // Set waktu selesai maintenance (Contoh: 2 jam dari sekarang)
+                // Dalam real case, Anda bisa set timestamp spesifik
                 let endTime = new Date().getTime() + (24 * 60 * 60 * 1000); 
 
                 setInterval(function() {
@@ -166,6 +166,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     let dist = endTime - now;
 
                     if (dist < 0) {
+                        // Reset waktu jika habis (Simulation)
                         endTime = new Date().getTime() + (24 * 60 * 60 * 1000);
                         dist = endTime - now;
                     }
@@ -218,6 +219,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     else if(key == 40 && d != "UP") d = "DOWN";
                 }
                 
+                // Fungsi untuk tombol HP
                 function changeDir(dir) {
                     if(dir == "LEFT" && d != "RIGHT") d = "LEFT";
                     else if(dir == "UP" && d != "DOWN") d = "UP";
@@ -226,17 +228,17 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                 }
 
                 function draw() {
-                    ctx.fillStyle = "#111"; 
+                    ctx.fillStyle = "#111"; // Background board
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     for(let i = 0; i < snake.length; i++) {
-                        ctx.fillStyle = (i == 0) ? "#e50914" : "#fff"; 
+                        ctx.fillStyle = (i == 0) ? "#e50914" : "#fff"; // Kepala Merah, Badan Putih
                         ctx.fillRect(snake[i].x, snake[i].y, box, box);
                         ctx.strokeStyle = "#000";
                         ctx.strokeRect(snake[i].x, snake[i].y, box, box);
                     }
 
-                    ctx.fillStyle = "#4ade80"; 
+                    ctx.fillStyle = "#4ade80"; // Makanan Hijau
                     ctx.fillRect(food.x, food.y, box, box);
 
                     let snakeX = snake[0].x;
@@ -247,6 +249,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     if(d == "RIGHT") snakeX += box;
                     if(d == "DOWN") snakeY += box;
 
+                    // Makan
                     if(snakeX == food.x && snakeY == food.y) {
                         score++;
                         scoreEl.innerText = score;
@@ -255,6 +258,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                         snake.pop();
                     }
 
+                    // Game Over Logic
                     let newHead = { x: snakeX, y: snakeY };
 
                     if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
@@ -278,9 +282,10 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                 function startGame() {
                     overlay.style.display = "none";
                     initGame();
+                    // Set default gerak ke kanan biar gak diem
                     d = "RIGHT"; 
                     if(game) clearInterval(game);
-                    game = setInterval(draw, 190);
+                    game = setInterval(draw, 190); // Kecepatan game (makin kecil makin cepat)
                 }
             </script>
         </body>
@@ -290,14 +295,17 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
     }
 }
 
+
+
+
 // 5. SESSION SECURITY & RATE LIMITING
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 1); // Wajib HTTPS
+ini_set('session.cookie_secure', 1); 
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Regenerasi ID Sesi (Anti Session Hijacking)
+// Regenerasi ID Sesi
 if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();
 } else if (time() - $_SESSION['CREATED'] > 1800) {
@@ -305,10 +313,10 @@ if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();
 }
 
-// Anti Brute Force (Blokir IP jika gagal login 5x)
+// Anti Brute Force
 if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 5) {
     $lockout_time = $_SESSION['lockout_time'] ?? 0;
-    if (time() - $lockout_time < 900) { // 900 detik = 15 Menit
+    if (time() - $lockout_time < 900) { 
         die("<div style='text-align:center;padding:50px;font-family:sans-serif;'>
                 <h1>â›” Akses Dibatasi</h1>
                 <p>Terlalu banyak percobaan login gagal.</p>
@@ -328,6 +336,10 @@ $api = new ApiHandler();
 $auth = new Auth();
 $page = $_GET['page'] ?? 'home';
 
+// --- GLOBAL SOURCE HANDLER ---
+// Menangkap pilihan server user (Default: dramabox)
+$source = isset($_GET['source']) ? $_GET['source'] : 'dramabox';
+
 // Helper Notifikasi
 function setFlash($icon, $title, $text) {
     $_SESSION['swal'] = ['icon' => $icon, 'title' => $title, 'text' => $text];
@@ -340,12 +352,11 @@ function setFlash($icon, $title, $text) {
 // Login Handler
 if ($page === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($auth->login($_POST['username'], $_POST['password'])) {
-        unset($_SESSION['login_attempts']); // Reset jika sukses
+        unset($_SESSION['login_attempts']); 
         setFlash('success', 'Login Berhasil', 'Selamat datang kembali!');
         header("Location: /dashboard");
         exit;
     } else {
-        // Catat kegagalan
         $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
         if ($_SESSION['login_attempts'] >= 5) $_SESSION['lockout_time'] = time();
         $error = "Username atau Password Salah!";
@@ -376,7 +387,6 @@ if ($page === 'logout') {
 // =========================================================
 
 // A. ROUTE DASHBOARD (Proteksi Login)
-// Halaman Dashboard JANGAN dienkripsi agar tidak rusak fungsi form-nya
 if (strpos($page, 'dashboard') === 0) {
     if (!isset($_SESSION['user_id'])) {
         setFlash('warning', 'Akses Ditolak', 'Silakan login terlebih dahulu.');
@@ -387,7 +397,6 @@ if (strpos($page, 'dashboard') === 0) {
     $parts = explode('/', $page);
     $view = $parts[1] ?? 'overview';
     
-    // Fix Routing untuk halaman dengan parameter
     if (strpos($view, 'user_form') !== false) $view = 'user_form';
     
     include 'views/dashboard/layout.php';
@@ -404,26 +413,49 @@ if ($page !== 'login' && $page !== 'register') {
 switch($page) {
     case 'home':
         $p = $_GET['p'] ?? 1;
-        $data = $api->getHome($p);
+        // Pass parameter $source ke fungsi getHome
+        $data = $api->getHome($p, $source);
         include 'views/public/home.php';
         break;
         
     case 'search':
         $q = $_GET['q'] ?? '';
-        $data = $api->search($q);
+        $p = $_GET['p'] ?? 1; 
+        // Pass parameter $source ke fungsi search
+        $data = $api->search($q, $p, $source);
         include 'views/public/home.php';
         break;
 
     case 'watch':
         $id = $_GET['id'] ?? null;
         if($id) {
-            $data = $api->getDetail($id);
-            if(isset($data['data']['dramaInfo'])) {
+            // [UPDATE] Ambil detail berdasarkan source
+            $data = $api->getDetail($id, $source);
+            
+            // [FIX VALIDASI] ApiHandler sekarang menormalisasi data Melolo 
+            // menjadi struktur yang sama dengan Dramabox: ['data']['dramaInfo']
+            $isValid = false;
+            
+            // Cek apakah dramaInfo ada (Berlaku untuk Dramabox & Melolo yang sudah dinormalisasi)
+            if (isset($data['data']['dramaInfo']) || isset($data['dramaInfo'])) {
+                $isValid = true;
+            }
+            // Fallback: Cek data raw jika normalisasi gagal
+            else if (!empty($data) && (isset($data['book_id']) || isset($data['title']) || isset($data['data']['book_name']))) {
+                $isValid = true;
+            }
+
+            if($isValid) {
                 include 'views/public/watch.php';
             } else {
+                // Debugging: Jika masih error, uncomment baris bawah untuk lihat isi data asli
+                // echo "<pre style='color:white'>"; print_r($data); echo "</pre>";
+                
                 echo "<div class='container' style='padding:100px; text-align:center; color:white;'>
-                        <h3>Drama tidak ditemukan :(</h3><br>
-                        <a href='/' style='color:#e50914;'>Kembali ke Beranda</a>
+                        <h3 style='font-size: 2rem; margin-bottom: 20px;'>Drama tidak ditemukan :(</h3>
+                        <p style='color:#ccc;'>Mungkin ID salah atau Server <b>" . ucfirst($source) . "</b> sedang sibuk.</p>
+                        <br>
+                        <a href='/?source=$source' style='color:#e50914; text-decoration:none; border:1px solid #e50914; padding:10px 20px; border-radius:5px;'>Kembali ke Beranda</a>
                       </div>";
             }
         } else { 
@@ -452,9 +484,9 @@ switch($page) {
         break;
 
     // --- API BACKEND (AJAX) ---
-    // API Tidak boleh dienkripsi karena harus return JSON murni
+    
+    // 1. Save History
     case 'api_save_history':
-        // Bersihkan buffer sebelumnya agar tidak ada HTML nyangkut
         ob_end_clean(); 
         header('Content-Type: application/json');
         
@@ -482,7 +514,24 @@ switch($page) {
         } else {
             echo json_encode(['status' => false, 'msg' => 'Invalid Data']);
         }
-        exit; // Stop execution
+        exit; 
+        break;
+        
+    // 2. [WAJIB ADA] API Proxy untuk Streaming Melolo
+    case 'api_get_stream':
+        ob_end_clean();
+        header('Content-Type: application/json');
+        
+        $vidId = $_GET['id'] ?? null;
+        $src   = $_GET['source'] ?? '';
+        
+        if ($src === 'melolo' && $vidId) {
+            $streamData = $api->getMeloloStream($vidId);
+            echo json_encode($streamData); 
+        } else {
+            echo json_encode(['status' => false, 'msg' => 'Invalid Request']);
+        }
+        exit;
         break;
 
     default:
@@ -500,25 +549,19 @@ if ($page !== 'login' && $page !== 'register') {
 // PROSES ENKRIPSI HTML (VIEW SOURCE PROTECTION)
 // =========================================================
 
-$html_content = ob_get_clean(); // Ambil semua output HTML yang sudah di-load
+$html_content = ob_get_clean(); 
 
-// Pengecualian: Jangan enkripsi Login, Register, atau API
-// Kita hanya mengenkripsi halaman PUBLIC (Home, Watch, Search, Terms, Privacy)
-$is_exempt = in_array($page, ['login', 'register', 'api_save_history']) || strpos($page, 'dashboard') === 0;
+// Pengecualian Enkripsi
+$is_exempt = in_array($page, ['login', 'register', 'api_save_history', 'api_get_stream']) || strpos($page, 'dashboard') === 0;
 
 if ($is_exempt) {
-    // Jika halaman exempt, tampilkan normal
     echo $html_content;
 } else {
-    // Jika halaman publik, enkripsi menjadi HEX
     $encrypted = '';
     $len = strlen($html_content);
     for ($i = 0; $i < $len; $i++) {
         $encrypted .= '%' . bin2hex($html_content[$i]);
     }
-    
-    // Output Script Decoder untuk Browser
-    // Ini akan membuat View Source hanya berisi kode Javascript acak
     echo '<script type="text/javascript">document.write(unescape("' . $encrypted . '"));</script>';
 }
 ?>
