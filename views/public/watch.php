@@ -66,17 +66,35 @@ $urlId = $_GET['id'] ?? '';
         </div>
 
         <div class="player-toolbar">
-            <div class="toolbar-left">
-                <label class="switch-toggle"><input type="checkbox" id="autoNext" checked><span class="slider"></span><span class="label-text">Auto Next</span></label>
-            </div>
-            <div class="toolbar-right">
-                <button onclick="toggleCinema()" class="tool-btn"><i class="ri-fullscreen-line"></i> Cinema</button>
-                <button onclick="shareDrama()" class="tool-btn"><i class="ri-share-forward-line"></i> Share</button>
-                <button onclick="toggleBookmark()" class="tool-btn" id="btnBookmark">
-                    <i class="ri-bookmark-line"></i> Simpan
-                </button>
-            </div>
+    <div class="toolbar-left" style="display:flex; align-items:center; gap:15px;">
+        <div class="skip-controls">
+            <button onclick="skipTime(-10)" class="tool-btn" title="Mundur 10s"><i class="ri-replay-10-line"></i> -10s</button>
+            <button onclick="skipTime(10)" class="tool-btn" title="Maju 10s">+10s <i class="ri-forward-10-line"></i></button>
         </div>
+        
+        <label class="switch-toggle">
+            <input type="checkbox" id="autoNext" checked>
+            <span class="slider"></span>
+            <span class="label-text">Auto Next</span>
+        </label>
+    </div>
+
+    <div class="toolbar-right" style="display:flex; align-items:center; gap:10px;">
+        <select id="speedSelect" onchange="changeSpeed(this)" class="tool-select">
+            <option value="0.5">0.5x</option>
+            <option value="1.0" selected>Normal</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2.0">2.0x</option>
+        </select>
+
+        <button onclick="toggleCinema()" class="tool-btn"><i class="ri-fullscreen-line"></i> Cinema</button>
+        <button onclick="shareDrama()" class="tool-btn"><i class="ri-share-forward-line"></i> Share</button>
+        <button onclick="toggleBookmark()" class="tool-btn" id="btnBookmark">
+            <i class="ri-bookmark-line"></i> Simpan
+        </button>
+    </div>
+</div>
 
         <div class="player-nav-controls">
             <button id="btnPrev" onclick="navEpisode(-1)" class="nav-btn disabled" disabled><i class="ri-skip-back-fill"></i> Prev</button>
@@ -163,6 +181,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if(first) first.click();
     }
 });
+
+// [FITUR BARU] Event Listener untuk Simpan Detik Terakhir
+video.addEventListener('timeupdate', function() {
+    // Simpan posisi setiap 5 detik (agar tidak memberatkan storage)
+    // Format Key: resume_IDDRAMA_IDEPS
+    if(video.currentTime > 5 && !video.paused) {
+        localStorage.setItem('resume_' + dramaId + '_' + currentEp, video.currentTime);
+    }
+});
+
+// [FITUR BARU] Fungsi Skip
+function skipTime(seconds) {
+    video.currentTime += seconds;
+}
+
+// [FITUR BARU] Fungsi Ganti Speed
+function changeSpeed(el) {
+    video.playbackRate = parseFloat(el.value);
+}
 
 // 2. AUTO NEXT
 video.addEventListener('ended', function() {
@@ -379,4 +416,40 @@ function shareDrama() { if(navigator.share) navigator.share({title:dramaTitle, u
 .paywall-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; }
 .btn-upgrade { background:var(--primary); color:white; padding:12px 30px; border-radius:50px; text-decoration:none; margin-top:20px; display:inline-block; font-weight:bold; font-size:1rem; box-shadow:0 5px 20px rgba(229,9,20,0.4); }
 @media(max-width:900px){ .theater-container{grid-template-columns:1fr;} .playlist-wrapper{height:500px;} }
+/* [FITUR BARU] Style untuk Select & Skip */
+.tool-select {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    outline: none;
+}
+.tool-select option {
+    background: #151518;
+    color: white;
+}
+.skip-controls {
+    display: flex;
+    gap: 5px;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    padding-right: 15px;
+    margin-right: 5px;
+}
+.skip-controls button {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.skip-controls button:hover {
+    color: var(--primary);
+}
+
+/* Responsive: Sembunyikan label text di HP */
+@media (max-width: 600px) {
+    .label-text { display: none; }
+    .skip-controls { border: none; padding: 0; margin: 0; }
+    .tool-btn { font-size: 0.8rem; padding: 5px; }
+}
 </style>
