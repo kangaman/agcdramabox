@@ -117,7 +117,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     <p>
                         Server sedang menjalani perawatan rutin untuk meningkatkan performa dan fitur baru. 
                         Jangan khawatir, kami akan segera kembali!
-                        <br>Sambil menunggu, yuk main game sebentar di sebelah! 👉
+                        <br>Sambil menunggu, yuk main game sebentar di sebelah! ðŸ‘‰
                     </p>
                     <div class="countdown">
                         <div class="time-box"><span id="h">01</span><small>Jam</small></div>
@@ -227,14 +227,47 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
     }
 }
 
-// 5. SESSION SECURITY & RATE LIMITING
+// =================================================================
+// 5. SESSION SECURITY & PERSISTENT LOGIN (3 HARI)
+// =================================================================
+
+// Hitungan: 3 Hari * 24 Jam * 60 Menit * 60 Detik = 259200 Detik
+$lifetime = 3 * 24 * 60 * 60; 
+
+// 1. Atur agar server menyimpan data sesi selama 3 hari
+ini_set('session.gc_maxlifetime', $lifetime);
+
+// 2. Atur agar cookie browser bertahan 3 hari
+ini_set('session.cookie_lifetime', $lifetime);
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 1); 
+ini_set('session.cookie_secure', 1); // Wajib HTTPS (Ubah jadi 0 jika localhost http)
+
+// 3. Set parameter cookie sebelum session_start
+session_set_cookie_params([
+    'lifetime' => $lifetime,
+    'path' => '/',
+    'domain' => $_SERVER['HTTP_HOST'],
+    'secure' => true,     // Pastikan pakai HTTPS
+    'httponly' => true,
+    'samesite' => 'Lax'   // Penting agar cookie tidak hilang saat redirect
+]);
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Regenerasi ID Sesi
+// 4. Perpanjang durasi cookie setiap kali user membuka halaman (Refresh Timer)
+if (isset($_COOKIE[session_name()])) {
+    setcookie(session_name(), $_COOKIE[session_name()], [
+        'expires' => time() + $lifetime,
+        'path' => '/',
+        'domain' => $_SERVER['HTTP_HOST'],
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+}
+
+// Regenerasi ID Sesi (Keamanan) - Tiap 30 Menit
 if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();
 } else if (time() - $_SESSION['CREATED'] > 1800) {
@@ -242,15 +275,11 @@ if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();
 }
 
-// Anti Brute Force
+// Anti Brute Force Login
 if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 5) {
     $lockout_time = $_SESSION['lockout_time'] ?? 0;
     if (time() - $lockout_time < 900) { 
-        die("<div style='text-align:center;padding:50px;font-family:sans-serif;'>
-                <h1>⛔ Akses Dibatasi</h1>
-                <p>Terlalu banyak percobaan login gagal.</p>
-                <p>Silakan coba lagi dalam 15 menit.</p>
-             </div>");
+        die("<div style='text-align:center;padding:50px;font-family:sans-serif;'><h1>⛔ Akses Dibatasi</h1><p>Terlalu banyak percobaan login. Coba lagi 15 menit.</p></div>");
     } else {
         unset($_SESSION['login_attempts']);
         unset($_SESSION['lockout_time']);
