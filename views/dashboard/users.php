@@ -23,7 +23,7 @@ if(isset($_POST['activate_id'])) {
     exit;
 }
 
-// AMBIL SEMUA DATA
+// AMBIL SEMUA DATA (Termasuk data login terakhir)
 $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -44,7 +44,7 @@ $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PD
                 <th>Pengguna</th>
                 <th>Role</th>
                 <th>Status Langganan</th>
-                <th>Bergabung</th>
+                <th>Login Terakhir</th> <th>Bergabung</th>
                 <th>Aksi</th>
             </tr>
         </thead>
@@ -61,7 +61,6 @@ $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PD
                 </td>
                 <td>
                     <?php 
-                        // PERBAIKAN: Menggunakan if/else biasa agar support PHP lama
                         $roleColor = '#9ca3af'; // Default (Free)
                         if ($u['role'] === 'admin') {
                             $roleColor = '#a78bfa'; // Ungu
@@ -85,6 +84,19 @@ $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PD
                         <span style="color:#ef4444; font-size:0.85rem; font-weight:500;">
                             ● Expired
                         </span>
+                    <?php endif; ?>
+                </td>
+                
+                <td>
+                    <?php if(!empty($u['last_login'])): ?>
+                        <div style="font-size:0.85rem; color:#fff; font-weight:500;">
+                            <?= date('d M H:i', strtotime($u['last_login'])) ?>
+                        </div>
+                        <div style="font-size:0.75rem; color:#666; font-family:monospace;">
+                            IP: <?= htmlspecialchars($u['last_ip'] ?? '-') ?>
+                        </div>
+                    <?php else: ?>
+                        <span style="color:var(--text-muted); font-size:0.8rem; font-style:italic;">Belum login</span>
                     <?php endif; ?>
                 </td>
                 <td style="color:var(--text-muted); font-size:0.9rem;">
