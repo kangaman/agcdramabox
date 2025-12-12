@@ -15,15 +15,24 @@ class Auth {
         $stmt->execute(['u' => $username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        // Verifikasi User & Password
         if ($user && password_verify($password, $user['password'])) {
+            
+            // [BARU] Cek Status Banned
+            // Pastikan kolom 'is_banned' sudah dibuat di database
+            if (isset($user['is_banned']) && $user['is_banned'] == 1) {
+                return 'banned'; // Mengembalikan status banned
+            }
+
+            // Set Session jika aman
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
             $_SESSION['vip_until'] = $user['active_until'];
             
-            // Cek Expired
+            // Cek Expired VIP
             if ($user['role'] === 'vip' && strtotime($user['active_until']) < time()) {
-                $_SESSION['role'] = 'free'; // Downgrade jika expired
+                $_SESSION['role'] = 'free'; // Downgrade otomatis jika expired
             }
             return true;
         }
@@ -32,6 +41,7 @@ class Auth {
 
     public function register($username, $password) {
         $hash = password_hash($password, PASSWORD_BCRYPT);
+        // Default is_banned adalah 0 (aman)
         $stmt = $this->conn->prepare("INSERT INTO users (username, password) VALUES (:u, :p)");
         try {
             return $stmt->execute(['u' => $username, 'p' => $hash]);
@@ -54,5 +64,6 @@ class Auth {
     public function logout() {
         session_destroy();
         header("Location: /");
+        exit;
     }
 }
