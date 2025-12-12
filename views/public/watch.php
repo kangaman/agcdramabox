@@ -5,7 +5,7 @@
 $raw = $data['data'] ?? $data ?? [];
 $source = $_GET['source'] ?? 'dramabox'; 
 
-// Normalisasi
+// Normalisasi Data
 if (isset($raw['dramaInfo'])) {
     $info = $raw['dramaInfo'];
     $chapters = $raw['chapters'] ?? [];
@@ -21,7 +21,7 @@ $urlCover = isset($_GET['cover']) ? urldecode($_GET['cover']) : '';
 $title = !empty($urlTitle) ? $urlTitle : ($info['bookName'] ?? $info['title'] ?? 'Nonton Drama');
 $rawCover = !empty($urlCover) ? $urlCover : ($info['cover'] ?? $info['thumbnail'] ?? '');
 
-// Fix Cover
+// Fix Cover Image
 if (strpos($rawCover, '.heic') !== false) {
     $cleanUrl = str_replace(['http://', 'https://'], '', $rawCover);
     $cover = 'https://wsrv.nl/?url=' . urlencode($cleanUrl) . '&output=jpg&q=80';
@@ -35,12 +35,27 @@ $rating = $info['score'] ?? '5.0';
 $views = number_format($info['followCount'] ?? $info['read_count'] ?? 0);
 $tags = $info['tags'] ?? $info['stat_infos'] ?? [];
 
-// 2. AUTH
+// 2. AUTHENTICATION
 require_once 'app/Auth.php';
 $auth = new Auth();
 $isVip = $auth->isVip();
-$freeLimit = 5; 
+$freeLimit = 5; // Batas episode gratis untuk user biasa
 $urlId = $_GET['id'] ?? '';
+
+// 3. HISTORY SYNC (DATABASE)
+$lastEpDB = 0;
+if (isset($_SESSION['user_id']) && $urlId) {
+    $db = (new Database())->getConnection();
+    $stmt = $db->prepare("SELECT episode FROM history WHERE user_id = ? AND book_id = ?");
+    $stmt->execute([$_SESSION['user_id'], $urlId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if($row) {
+        $lastEpDB = $row['episode'];
+    }
+}
+
+// 4. LOAD CONFIG IKLAN (Dari Index/Global)
+global $webConfig;
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -54,51 +69,66 @@ $urlId = $_GET['id'] ?? '';
             <div id="loadingSpinner" class="loading-overlay" style="display:none;">
                 <div class="spinner"></div><p style="margin-top:15px; color:#fff;">Memuat Video...</p>
             </div>
+            
             <video id="mainPlayer" controls poster="<?= $cover ?>" class="custom-video" playsinline></video>
+            
             <div id="playerOverlay" class="paywall-overlay" style="display: none;">
                 <div class="paywall-content">
                     <i id="overlayIcon" class="ri-lock-2-fill icon-lock"></i>
                     <h2 id="overlayTitle">Konten Premium</h2>
                     <p id="overlayDesc">Upgrade VIP untuk melanjutkan.</p>
-                    <div id="overlayButtons" class="paywall-actions"><a href="/dashboard/billing" class="btn-upgrade">Beli VIP</a></div>
+                    <div id="overlayButtons" class="paywall-actions">
+                        <a href="/dashboard/billing" class="btn-upgrade">Beli VIP</a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="player-toolbar">
-    <div class="toolbar-left" style="display:flex; align-items:center; gap:15px;">
-        <div class="skip-controls">
-            <button onclick="skipTime(-10)" class="tool-btn" title="Mundur 10s"><i class="ri-replay-10-line"></i> -10s</button>
-            <button onclick="skipTime(10)" class="tool-btn" title="Maju 10s">+10s <i class="ri-forward-10-line"></i></button>
+        <?php if(!empty($webConfig['ad_player'])): ?>
+        <div class="ad-player-slot">
+            <small>ADVERTISEMENT</small>
+            <div class="ad-content">
+                <?= $webConfig['ad_player'] ?>
+            </div>
         </div>
-        
-        <label class="switch-toggle">
-            <input type="checkbox" id="autoNext" checked>
-            <span class="slider"></span>
-            <span class="label-text">Auto Next</span>
-        </label>
-    </div>
+        <?php endif; ?>
 
-    <div class="toolbar-right" style="display:flex; align-items:center; gap:10px;">
-        <select id="speedSelect" onchange="changeSpeed(this)" class="tool-select">
-            <option value="0.5">0.5x</option>
-            <option value="1.0" selected>Normal</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2.0">2.0x</option>
-        </select>
+        <div class="player-toolbar">
+            <div class="toolbar-left">
+                <div class="skip-controls">
+                    <button onclick="skipTime(-10)" class="tool-btn" title="Mundur 10s"><i class="ri-replay-10-line"></i> -10s</button>
+                    <button onclick="skipTime(10)" class="tool-btn" title="Maju 10s">+10s <i class="ri-forward-10-line"></i></button>
+                </div>
+                
+                <label class="switch-toggle">
+                    <input type="checkbox" id="autoNext" checked>
+                    <span class="slider"></span>
+                    <span class="label-text">Auto Next</span>
+                </label>
+            </div>
 
-        <button onclick="toggleCinema()" class="tool-btn"><i class="ri-fullscreen-line"></i> Cinema</button>
-        <button onclick="shareDrama()" class="tool-btn"><i class="ri-share-forward-line"></i> Share</button>
-        <button onclick="toggleBookmark()" class="tool-btn" id="btnBookmark">
-            <i class="ri-bookmark-line"></i> Simpan
-        </button>
-    </div>
-</div>
+            <div class="toolbar-right">
+                <select id="speedSelect" onchange="changeSpeed(this)" class="tool-select">
+                    <option value="0.5">0.5x</option>
+                    <option value="1.0" selected>Normal</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2.0">2.0x</option>
+                </select>
+
+                <button onclick="toggleCinema()" class="tool-btn" title="Mode Bioskop"><i class="ri-fullscreen-line"></i> <span class="label-text">Cinema</span></button>
+                <button onclick="toggleBookmark()" class="tool-btn" id="btnBookmark" title="Simpan ke Favorit">
+                    <i class="ri-bookmark-line"></i> <span class="label-text">Simpan</span>
+                </button>
+                <button onclick="reportVideo()" class="tool-btn report-btn" title="Lapor Rusak">
+                    <i class="ri-alarm-warning-line"></i> <span class="label-text">Lapor</span>
+                </button>
+            </div>
+        </div>
 
         <div class="player-nav-controls">
-            <button id="btnPrev" onclick="navEpisode(-1)" class="nav-btn disabled" disabled><i class="ri-skip-back-fill"></i> Prev</button>
-            <button id="btnNext" onclick="navEpisode(1)" class="nav-btn">Next <i class="ri-skip-forward-fill"></i></button>
+            <button id="btnPrev" onclick="navEpisode(-1)" class="nav-btn disabled" disabled><i class="ri-skip-back-fill"></i> Prev Episode</button>
+            <button id="btnNext" onclick="navEpisode(1)" class="nav-btn">Next Episode <i class="ri-skip-forward-fill"></i></button>
         </div>
 
         <div class="video-info">
@@ -106,9 +136,10 @@ $urlId = $_GET['id'] ?? '';
             <div class="meta-badges">
                 <span class="badge-server">SERVER: <?= strtoupper($source) ?></span>
                 <span class="badge-rating"><i class="ri-star-fill"></i> <?= $rating ?></span>
-                <span class="badge-info"><i class="ri-eye-line"></i> <?= $views ?> Views</span>
+                <span class="badge-info"><i class="ri-eye-line"></i> <?= $views ?></span>
                 <span class="badge-info"><i class="ri-film-line"></i> <?= count($chapters) ?> Eps</span>
             </div>
+            
             <?php if(!empty($tags)): ?>
             <div class="tags-container">
                 <?php 
@@ -119,6 +150,7 @@ $urlId = $_GET['id'] ?? '';
                 ?>
             </div>
             <?php endif; ?>
+            
             <div class="synopsis-box">
                 <h3>Sinopsis</h3>
                 <p><?= nl2br(htmlspecialchars($intro)) ?></p>
@@ -155,59 +187,66 @@ $urlId = $_GET['id'] ?? '';
 </div>
 
 <script>
-// --- GLOBAL VARS ---
-// Kita ambil data PHP dan simpan di variabel JS global agar fungsi history bisa membacanya
+// --- GLOBAL VARIABLES ---
 var dramaId = '<?= $urlId ?>'; 
 var currentSource = '<?= $source ?>';
 var dramaTitle = '<?= addslashes($title) ?>';
+var lastEpServer = <?= $lastEpDB ?>; // Data dari DB
 var dramaCover = '<?= addslashes($cover) ?>';
 var totalEps = <?= count($chapters) ?>;
 var isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
 
 var video = document.getElementById('mainPlayer');
 var hls = null;
+var currentEpNum = 0;
 
 // 1. INIT
 document.addEventListener('DOMContentLoaded', function() {
     loadHistory(); 
     checkBookmark();
-    // Auto click episode pertama jika belum nonton, atau lanjut episode terakhir
-    var lastWatched = getLastWatchedEp();
-    var startEp = lastWatched ? lastWatched : 1;
+    
+    // Logika Auto-Resume: Prioritas Server > LocalStorage > Ep 1
+    var startEp = 1;
+    if (lastEpServer > 0) {
+        startEp = lastEpServer;
+    } else {
+        var localLast = getLastWatchedEp();
+        if (localLast > 0) startEp = localLast;
+    }
+
     var btn = document.getElementById('eps-btn-' + startEp);
-    if(btn) btn.click();
-    else {
+    if(btn) {
+        btn.click();
+        // Scroll ke tombol
+        setTimeout(() => {
+            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }, 500);
+    } else {
         var first = document.querySelector('.eps-item');
         if(first) first.click();
     }
 });
 
-// [FITUR BARU] Event Listener untuk Simpan Detik Terakhir
+// Fitur: Simpan Detik Terakhir (Resume Playback)
 video.addEventListener('timeupdate', function() {
-    // Simpan posisi setiap 5 detik (agar tidak memberatkan storage)
-    // Format Key: resume_IDDRAMA_IDEPS
-    if(video.currentTime > 5 && !video.paused) {
-        localStorage.setItem('resume_' + dramaId + '_' + currentEp, video.currentTime);
+    if(video.currentTime > 5 && !video.paused && currentEpNum > 0) {
+        localStorage.setItem('resume_' + dramaId + '_' + currentEpNum, video.currentTime);
     }
 });
 
-// [FITUR BARU] Fungsi Skip
-function skipTime(seconds) {
-    video.currentTime += seconds;
-}
+// Fitur: Controls
+function skipTime(seconds) { video.currentTime += seconds; }
+function changeSpeed(el) { video.playbackRate = parseFloat(el.value); }
 
-// [FITUR BARU] Fungsi Ganti Speed
-function changeSpeed(el) {
-    video.playbackRate = parseFloat(el.value);
-}
-
-// 2. AUTO NEXT
+// Fitur: Auto Next
 video.addEventListener('ended', function() {
     if(document.getElementById('autoNext').checked) navEpisode(1);
 });
 
-// 3. PLAY FUNCTION
+// 2. MAIN PLAY FUNCTION
 function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
+    currentEpNum = epsNum;
+
     // UI Updates
     document.getElementById('loadingSpinner').style.display = 'flex';
     document.getElementById('playerOverlay').style.display = 'none';
@@ -215,7 +254,6 @@ function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
     
     if(btn) { 
         btn.classList.add('active'); 
-        // [PENTING] Simpan History saat tombol diklik
         markAsWatched(epsNum); 
         updateNavButtons(btn); 
     }
@@ -223,8 +261,12 @@ function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
     video.style.display = 'block'; 
     video.pause();
 
-    if (isLocked) { showOverlay('ri-vip-crown-2-fill', '#ffd700', 'Konten Premium', 'Upgrade VIP.', true); return; }
-    if (!hasLink) { showOverlay('ri-file-shred-line', '#666', 'Belum Tersedia', 'Server belum rilis.', false); return; }
+    // Cek Resume Time
+    var resumeTime = localStorage.getItem('resume_' + dramaId + '_' + epsNum);
+
+    // Handler Kondisi
+    if (isLocked) { showOverlay('ri-vip-crown-2-fill', '#ffd700', 'Konten Premium', 'Upgrade VIP untuk menonton.', true); return; }
+    if (!hasLink) { showOverlay('ri-file-shred-line', '#666', 'Belum Tersedia', 'Episode ini belum dirilis.', false); return; }
 
     if (currentSource === 'melolo' && vidId) {
         fetch(`/index.php?page=api_get_stream&source=melolo&id=${vidId}`)
@@ -233,35 +275,44 @@ function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
                 let streamUrl = resp.main_url || resp.data?.main_url || resp.url || '';
                 if(streamUrl) {
                     if (streamUrl.startsWith('http://')) streamUrl = streamUrl.replace('http://', 'https://');
-                    loadVideo(streamUrl);
+                    loadVideo(streamUrl, resumeTime);
                 } else {
                     console.error("Link failed:", resp);
                     showOverlay('ri-error-warning-line', '#ff4757', 'Gagal', 'Video tidak ditemukan.', false);
                 }
             })
-            .catch(err => showOverlay('ri-wifi-off-line', '#ff4757', 'Error', 'Gagal koneksi.', false));
+            .catch(err => showOverlay('ri-wifi-off-line', '#ff4757', 'Error', 'Gagal koneksi server.', false));
     } else {
-        loadVideo(directUrl);
+        loadVideo(directUrl, resumeTime);
     }
 }
 
-function loadVideo(url) {
+function loadVideo(url, startTime) {
     if(!url) { document.getElementById('loadingSpinner').style.display = 'none'; return; }
+    
+    function onReady() {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        if(startTime) video.currentTime = parseFloat(startTime);
+        video.play().catch(e => console.log("Autoplay blocked"));
+    }
+
     if (Hls.isSupported() && url.includes('.m3u8')) {
         if(hls) hls.destroy();
         hls = new Hls(); hls.loadSource(url); hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play().catch(e=>console.log("Autoplay blocked")); document.getElementById('loadingSpinner').style.display = 'none'; });
+        hls.on(Hls.Events.MANIFEST_PARSED, onReady);
         hls.on(Hls.Events.ERROR, function(event, data) { if(data.fatal) video.src = url; });
     } else {
-        video.src = url; video.play().then(()=>document.getElementById('loadingSpinner').style.display = 'none').catch(()=>document.getElementById('loadingSpinner').style.display = 'none');
+        video.src = url; 
+        video.addEventListener('loadedmetadata', onReady, {once:true});
+        video.play().catch(e=>{});
     }
 }
 
-// 4. HISTORY SYSTEM (FIXED)
+// 3. HISTORY & SYNC
 function markAsWatched(num) {
     if(!dramaId) return;
 
-    // A. LocalStorage (Mata & Lanjut Nonton)
+    // A. LocalStorage
     var k = 'watched_' + dramaId;
     var h = JSON.parse(localStorage.getItem(k) || '[]');
     if(!h.includes(num)) { 
@@ -269,7 +320,7 @@ function markAsWatched(num) {
         localStorage.setItem(k, JSON.stringify(h)); 
     }
     
-    // Simpan Metadata Drama agar muncul di Home
+    // Simpan Metadata (Untuk Home > Lanjut Nonton)
     var dramaData = {
         id: dramaId,
         title: dramaTitle,
@@ -280,34 +331,40 @@ function markAsWatched(num) {
     };
     localStorage.setItem('history_item_' + dramaId, JSON.stringify(dramaData));
 
-    // Update UI Mata
+    // Update Icon
     var ic = document.querySelector(`#eps-btn-${num} .watched-icon`);
     if(ic) ic.style.display = 'block';
 
-    // B. Database (Jika Login)
+    // B. Database Sync (Jika Login)
     if (isLoggedIn) {
         var apiData = {
-            id: dramaId,
-            title: dramaTitle,
-            cover: dramaCover,
-            episode: num,
-            total: totalEps
+            id: dramaId, title: dramaTitle, cover: dramaCover,
+            episode: num, total: totalEps
         };
-        // Kirim Beacon/Fetch agar tersimpan di server
         fetch('/index.php?page=api_save_history', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(apiData)
-        }).then(r => r.json()).then(d => {
-            if(!d.status) console.warn("Gagal simpan DB");
         });
     }
 }
 
 function loadHistory() {
     if(!dramaId) return;
-    var h = JSON.parse(localStorage.getItem('watched_' + dramaId) || '[]');
-    h.forEach(n => { var el = document.querySelector(`#eps-btn-${n} .watched-icon`); if(el) el.style.display='block'; });
+    
+    var localData = JSON.parse(localStorage.getItem('watched_' + dramaId) || '[]');
+
+    // Gabungkan data server ke local jika belum ada
+    if (lastEpServer > 0 && !localData.includes(lastEpServer)) {
+        localData.push(lastEpServer);
+        localStorage.setItem('watched_' + dramaId, JSON.stringify(localData));
+    }
+
+    // Tampilkan tanda mata
+    localData.forEach(n => { 
+        var el = document.querySelector(`#eps-btn-${n} .watched-icon`); 
+        if(el) el.style.display='block'; 
+    });
 }
 
 function getLastWatchedEp() {
@@ -315,21 +372,16 @@ function getLastWatchedEp() {
     return h.lastEp || 0;
 }
 
-// 5. BOOKMARK SYSTEM
+// 4. BOOKMARK & UTILS
 function toggleBookmark() {
     let bookmarks = JSON.parse(localStorage.getItem('my_bookmarks') || '[]');
     const index = bookmarks.findIndex(b => b.id === dramaId);
     
-    const dramaData = {
-        id: dramaId,
-        title: dramaTitle,
-        cover: dramaCover,
-        source: currentSource,
-        timestamp: new Date().getTime()
-    };
-
     if (index === -1) {
-        bookmarks.push(dramaData);
+        bookmarks.push({
+            id: dramaId, title: dramaTitle, cover: dramaCover,
+            source: currentSource, timestamp: new Date().getTime()
+        });
         alert('Disimpan ke Favorit!');
     } else {
         bookmarks.splice(index, 1);
@@ -351,17 +403,30 @@ function checkBookmark() {
     }
 }
 
-// Helper Functions
+function reportVideo() {
+    var msg = `Lapor Min, Video Error:\nJudul: ${dramaTitle}\nEpisode: ${currentEpNum}\nID: ${dramaId}`;
+    var url = `https://t.me/jejakintel?text=` + encodeURIComponent(msg); // Ganti username telegram Anda
+    if(confirm("Video error? Laporkan ke Admin via Telegram?")) {
+        window.open(url, '_blank');
+    }
+}
+
+// Helpers
 function navEpisode(dir) { var cur = document.querySelector('.eps-item.active'); if(!cur) return; var target = dir===1 ? cur.nextElementSibling : cur.previousElementSibling; if(target) target.click(); }
 function updateNavButtons(btn) { document.getElementById('btnPrev').disabled = !btn.previousElementSibling; document.getElementById('btnNext').disabled = !btn.nextElementSibling; }
-function showOverlay(icon, col, title, desc, btn) { var ov = document.getElementById('playerOverlay'); video.style.display = 'none'; video.pause(); ov.style.display = 'flex'; document.getElementById('overlayIcon').className = icon; document.getElementById('overlayIcon').style.color = col; document.getElementById('overlayTitle').innerText = title; document.getElementById('overlayDesc').innerText = desc; document.getElementById('overlayButtons').style.display = btn ? 'block' : 'none'; document.getElementById('loadingSpinner').style.display = 'none'; }
+function showOverlay(icon, col, title, desc, btn) { 
+    var ov = document.getElementById('playerOverlay'); video.style.display = 'none'; video.pause(); ov.style.display = 'flex'; 
+    document.getElementById('overlayIcon').className = icon; document.getElementById('overlayIcon').style.color = col; 
+    document.getElementById('overlayTitle').innerText = title; document.getElementById('overlayDesc').innerText = desc; 
+    document.getElementById('overlayButtons').style.display = btn ? 'block' : 'none'; 
+    document.getElementById('loadingSpinner').style.display = 'none'; 
+}
 function toggleCinema() { document.getElementById('theaterContainer').classList.toggle('cinema-mode'); }
 function filterEpisodes() { var v = document.getElementById('epsSearch').value.toLowerCase(); document.querySelectorAll('.eps-item').forEach(el => { var t = el.innerText.toLowerCase(); el.style.display = t.includes(v) ? "" : "none"; }); }
-function shareDrama() { if(navigator.share) navigator.share({title:dramaTitle, url:window.location.href}); else alert('Link tersalin!'); }
 </script>
 
 <style>
-/* CSS Player Standar */
+/* --- BASE PLAYER CSS --- */
 .theater-bg { position:fixed; top:0; left:0; width:100%; height:100vh; background-size:cover; filter:blur(80px) brightness(0.3); z-index:-1; }
 .theater-container { display:grid; grid-template-columns:1fr 340px; gap:30px; max-width:1400px; margin:0 auto; padding:30px 20px; }
 .theater-container.cinema-mode { grid-template-columns:1fr; }
@@ -371,19 +436,35 @@ function shareDrama() { if(navigator.share) navigator.share({title:dramaTitle, u
 .loading-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:#000; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 .spinner { width:40px; height:40px; border:4px solid rgba(255,255,255,0.1); border-left-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; }
 @keyframes spin { 100% { transform:rotate(360deg); } }
-.player-toolbar { display:flex; justify-content:space-between; background:#151518; padding:12px 20px; border-radius:0 0 16px 16px; margin-top:-5px; border:1px solid rgba(255,255,255,0.1); border-top:none; }
-.player-nav-controls { display:flex; gap:15px; margin-top:20px; }
-.nav-btn { flex:1; padding:14px; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; font-weight:600; transition:0.3s; }
-.nav-btn:hover:not(:disabled) { background:var(--primary); border-color:var(--primary); }
-.nav-btn.disabled { opacity:0.3; cursor:not-allowed; }
-.tool-btn { background:transparent; border:none; color:#aaa; cursor:pointer; display:inline-flex; align-items:center; gap:5px; padding:5px 10px; transition:0.3s; }
-.tool-btn:hover { color:white; }
+
+/* --- AD SLOT --- */
+.ad-player-slot { margin-top:15px; text-align:center; background:#0a0a0c; padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); }
+.ad-player-slot small { display:block; color:#444; font-size:0.7rem; margin-bottom:5px; letter-spacing:1px; }
+
+/* --- TOOLBAR --- */
+.player-toolbar { display:flex; justify-content:space-between; align-items:center; background:#151518; padding:12px 20px; border-radius:0 0 16px 16px; margin-top:-5px; border:1px solid rgba(255,255,255,0.1); border-top:none; flex-wrap:wrap; gap:10px; }
+.toolbar-left, .toolbar-right { display:flex; align-items:center; gap:10px; }
+.tool-btn { background:transparent; border:none; color:#aaa; cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:6px 10px; transition:0.3s; font-size:0.9rem; border-radius:6px; }
+.tool-btn:hover { color:white; background:rgba(255,255,255,0.05); }
+.tool-btn.report-btn:hover { color:#ff4757; }
+.tool-select { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; outline: none; }
+.tool-select option { background: #151518; }
+
+/* --- SKIP & TOGGLE --- */
+.skip-controls { display:flex; gap:5px; border-right:1px solid rgba(255,255,255,0.1); padding-right:15px; margin-right:5px; }
 .switch-toggle { display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; color:#ddd; }
 .switch-toggle input { display:none; }
 .switch-toggle .slider { width:36px; height:20px; background:#444; border-radius:20px; position:relative; transition:0.3s; display:inline-block; }
 .switch-toggle .slider:before { content:""; position:absolute; width:16px; height:16px; border-radius:50%; background:white; top:2px; left:2px; transition:0.3s; }
 .switch-toggle input:checked + .slider { background:var(--primary); }
 .switch-toggle input:checked + .slider:before { transform:translateX(16px); }
+
+/* --- NAVIGATION & INFO --- */
+.player-nav-controls { display:flex; gap:15px; margin-top:20px; }
+.nav-btn { flex:1; padding:14px; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; font-weight:600; transition:0.3s; display:flex; align-items:center; justify-content:center; gap:10px; }
+.nav-btn:hover:not(:disabled) { background:var(--primary); border-color:var(--primary); }
+.nav-btn.disabled { opacity:0.3; cursor:not-allowed; }
+
 .video-info { margin-top:30px; }
 .drama-title { font-size:2rem; font-weight:800; margin-bottom:15px; line-height:1.2; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
 .meta-badges { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
@@ -393,13 +474,14 @@ function shareDrama() { if(navigator.share) navigator.share({title:dramaTitle, u
 .badge-info { background:rgba(255,255,255,0.1); color:#ccc; }
 .tags-container { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:25px; }
 .tag-pill { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:6px 16px; border-radius:50px; font-size:0.85rem; color:#ccc; text-decoration:none; transition:0.3s; }
-.tag-pill:hover { background:var(--primary); color:white; border-color:var(--primary); transform:translateY(-2px); }
+.tag-pill:hover { background:var(--primary); color:white; border-color:var(--primary); }
 .synopsis-box h3 { font-size:1.1rem; margin-bottom:10px; color:#fff; border-left:4px solid var(--primary); padding-left:10px; }
 .synopsis-box p { color:#ccc; line-height:1.7; font-size:1rem; }
+
+/* --- PLAYLIST --- */
 .playlist-wrapper { background:#151518; border-radius:16px; height:700px; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
 .playlist-header { padding:20px; background:rgba(0,0,0,0.2); border-bottom:1px solid rgba(255,255,255,0.05); }
-.playlist-header h3 { margin:0 0 15px 0; font-size:1.1rem; }
-.ph-search { position:relative; }
+.ph-search { position:relative; margin-top:10px; }
 .ph-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#666; }
 .ph-search input { width:100%; background:#0a0a0c; border:1px solid rgba(255,255,255,0.1); padding:10px 10px 10px 35px; color:white; border-radius:8px; font-size:0.9rem; transition:0.3s; }
 .ph-search input:focus { border-color:var(--primary); outline:none; }
@@ -415,41 +497,13 @@ function shareDrama() { if(navigator.share) navigator.share({title:dramaTitle, u
 .eps-status { font-size:0.75rem; color:#888; margin-left:auto; display:flex; align-items:center; gap:5px; }
 .paywall-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; }
 .btn-upgrade { background:var(--primary); color:white; padding:12px 30px; border-radius:50px; text-decoration:none; margin-top:20px; display:inline-block; font-weight:bold; font-size:1rem; box-shadow:0 5px 20px rgba(229,9,20,0.4); }
-@media(max-width:900px){ .theater-container{grid-template-columns:1fr;} .playlist-wrapper{height:500px;} }
-/* [FITUR BARU] Style untuk Select & Skip */
-.tool-select {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    outline: none;
-}
-.tool-select option {
-    background: #151518;
-    color: white;
-}
-.skip-controls {
-    display: flex;
-    gap: 5px;
-    border-right: 1px solid rgba(255,255,255,0.1);
-    padding-right: 15px;
-    margin-right: 5px;
-}
-.skip-controls button {
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-.skip-controls button:hover {
-    color: var(--primary);
-}
 
-/* Responsive: Sembunyikan label text di HP */
-@media (max-width: 600px) {
-    .label-text { display: none; }
-    .skip-controls { border: none; padding: 0; margin: 0; }
-    .tool-btn { font-size: 0.8rem; padding: 5px; }
+/* --- RESPONSIVE --- */
+@media(max-width:900px){ .theater-container{grid-template-columns:1fr;} .playlist-wrapper{height:500px;} }
+@media(max-width:600px){ 
+    .label-text { display:none; } 
+    .skip-controls { border:none; padding:0; margin:0; } 
+    .tool-btn { font-size:0.8rem; padding:8px; }
+    .ad-player-slot { margin: 10px 0; padding: 10px; }
 }
 </style>
