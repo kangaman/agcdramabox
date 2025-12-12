@@ -135,15 +135,20 @@
         </div>
     </nav>
 
-    <script>
-    function handleSearch(form) {
-        var k = form.q.value.trim();
-        var s = form.source.value; // Ambil nilai dropdown source
-        
-        if(k) {
-            // Redirect ke URL dengan parameter source
-            window.location.href = '/?page=search&q=' + encodeURIComponent(k) + '&source=' + s;
-        }
+<script>
+function handleSearch(form) {
+    var k = form.q.value.trim();
+    var s = form.source.value;
+    var btn = form.querySelector('.search-btn-icon'); // Ambil tombol
+
+    if(k) {
+        // 1. Ubah tampilan tombol jadi loading
+        btn.classList.add('loading');
+        btn.disabled = true; // Cegah klik ganda
+
+        // 2. Redirect
+        window.location.href = '/?page=search&q=' + encodeURIComponent(k) + '&source=' + s;
     }
-    </script>
+}
+</script>
     <main class="main-content">
