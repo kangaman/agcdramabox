@@ -18,22 +18,36 @@ class Auth {
         // Verifikasi User & Password
         if ($user && password_verify($password, $user['password'])) {
             
-            // [BARU] Cek Status Banned
-            // Pastikan kolom 'is_banned' sudah dibuat di database
+            // 1. Cek Status Banned
             if (isset($user['is_banned']) && $user['is_banned'] == 1) {
-                return 'banned'; // Mengembalikan status banned
+                return 'banned'; 
             }
 
-            // Set Session jika aman
+            // 2. [UPDATE BARU] Catat Log Aktivitas (Last Login & IP)
+            try {
+                $update = $this->conn->prepare("UPDATE users SET last_login = NOW(), last_ip = :ip WHERE id = :id");
+                $update->execute([
+                    'ip' => $_SERVER['REMOTE_ADDR'],
+                    'id' => $user['id']
+                ]);
+            } catch (Exception $e) {
+                // Abaikan error log agar user tetap bisa login meski log gagal
+            }
+
+            // 3. Set Session
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
             $_SESSION['vip_until'] = $user['active_until'];
             
-            // Cek Expired VIP
+            // 4. Cek Expired VIP (Downgrade Otomatis)
             if ($user['role'] === 'vip' && strtotime($user['active_until']) < time()) {
-                $_SESSION['role'] = 'free'; // Downgrade otomatis jika expired
+                $_SESSION['role'] = 'free'; 
+                
+                // Update ke database juga agar permanen
+                $this->conn->prepare("UPDATE users SET role='free' WHERE id=?")->execute([$user['id']]);
             }
+            
             return true;
         }
         return false;
@@ -41,7 +55,7 @@ class Auth {
 
     public function register($username, $password) {
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        // Default is_banned adalah 0 (aman)
+        // Default role 'free', is_banned 0
         $stmt = $this->conn->prepare("INSERT INTO users (username, password) VALUES (:u, :p)");
         try {
             return $stmt->execute(['u' => $username, 'p' => $hash]);
@@ -54,7 +68,7 @@ class Auth {
         if (!isset($_SESSION['user_id'])) return false;
         if ($_SESSION['role'] === 'admin') return true;
         
-        // Cek status real-time atau session (disini session biar cepat)
+        // Cek status real-time atau session
         if ($_SESSION['role'] === 'vip' && isset($_SESSION['vip_until'])) {
             return strtotime($_SESSION['vip_until']) > time();
         }
