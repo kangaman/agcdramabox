@@ -111,12 +111,20 @@
             </a>
             
             <div class="search-wrapper">
-                <form action="/" method="GET" onsubmit="handleSearch(this); return false;">
-                    <i class="ri-search-line search-icon"></i>
-                    <input type="text" name="q" placeholder="Cari judul drama..." required autocomplete="off">
+                <form id="searchForm" action="/" method="GET" onsubmit="handleSearch(this); return false;">
+                    
+                    <select name="source" class="search-source">
+                        <option value="dramabox" <?= (isset($_GET['source']) && $_GET['source'] == 'dramabox') ? 'selected' : '' ?>>Dramabox</option>
+                        <option value="melolo" <?= (isset($_GET['source']) && $_GET['source'] == 'melolo') ? 'selected' : '' ?>>Melolo</option>
+                    </select>
+
+                    <input type="text" name="q" placeholder="Cari judul drama..." required autocomplete="off" value="<?= isset($_GET['q']) ? htmlspecialchars($_GET['q']) : '' ?>">
+                    
+                    <button type="submit" class="search-btn-icon">
+                        <i class="ri-search-line"></i>
+                    </button>
                 </form>
             </div>
-
             <div class="nav-links">
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <a href="/dashboard" class="btn-login">Dashboard</a>
@@ -130,11 +138,12 @@
     <script>
     function handleSearch(form) {
         var k = form.q.value.trim();
+        var s = form.source.value; // Ambil nilai dropdown source
+        
         if(k) {
-            // Redirect ke URL ?page=search&q=... 
-            window.location.href = '/?page=search&q=' + encodeURIComponent(k);
+            // Redirect ke URL dengan parameter source
+            window.location.href = '/?page=search&q=' + encodeURIComponent(k) + '&source=' + s;
         }
     }
     </script>
-
     <main class="main-content">
