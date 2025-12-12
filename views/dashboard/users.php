@@ -23,7 +23,7 @@ if(isset($_POST['activate_id'])) {
     exit;
 }
 
-// AMBIL SEMUA DATA (Termasuk data login terakhir)
+// AMBIL DATA
 $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -33,100 +33,113 @@ $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PD
         <p style="color:var(--text-muted)">Total: <strong><?= count($users) ?></strong> Pengguna Terdaftar</p>
     </div>
     <a href="/dashboard/user_form" class="btn btn-primary">
-        <i class="ri-user-add-line"></i> Tambah User
+        <i class="ri-user-add-line"></i> <span>Tambah User</span>
     </a>
 </div>
 
 <div class="card">
-    <table class="datatable display" style="width:100%">
-        <thead>
-            <tr>
-                <th>Pengguna</th>
-                <th>Role</th>
-                <th>Status Langganan</th>
-                <th>Login Terakhir</th> <th>Bergabung</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach($users as $u): ?>
-            <tr>
-                <td>
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div class="avatar" style="width:35px; height:35px; font-size:0.9rem;">
-                            <?= strtoupper(substr($u['username'], 0, 1)) ?>
+    <div class="table-responsive">
+        <table class="datatable display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Pengguna</th>
+                    <th>Role (Hak Akses)</th>
+                    <th>Status VIP</th>
+                    <th>Login Terakhir</th>
+                    <th>Aksi Kontrol</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach($users as $u): ?>
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div class="avatar-circle">
+                                <?= strtoupper(substr($u['username'], 0, 1)) ?>
+                            </div>
+                            <div>
+                                <div style="font-weight:600; color:white;"><?= htmlspecialchars($u['username']) ?></div>
+                                <div style="font-size:0.75rem; color:#666;">ID: #<?= $u['id'] ?></div>
+                            </div>
                         </div>
-                        <span style="font-weight:600; font-size:0.95rem;"><?= htmlspecialchars($u['username']) ?></span>
-                    </div>
-                </td>
-                <td>
-                    <?php 
-                        $roleColor = '#9ca3af'; // Default (Free)
-                        if ($u['role'] === 'admin') {
-                            $roleColor = '#a78bfa'; // Ungu
-                        } elseif ($u['role'] === 'vip') {
-                            $roleColor = '#ffd700'; // Emas
-                        }
-                    ?>
-                    <span class="badge" style="color:<?= $roleColor ?>; border:1px solid <?= $roleColor ?>40; background:<?= $roleColor ?>10">
-                        <?= strtoupper($u['role']) ?>
-                    </span>
-                </td>
-                <td>
-                    <?php if($u['active_until'] && strtotime($u['active_until']) > time()): ?>
-                        <?php $days = floor((strtotime($u['active_until']) - time())/(60*60*24)); ?>
-                        <span style="color:#4ade80; font-size:0.85rem; font-weight:500;">
-                            ● Aktif (<?= $days ?> Hari)
-                        </span>
-                    <?php elseif($u['role'] == 'free'): ?>
-                        <span style="color:#666; font-size:0.85rem;">-</span>
-                    <?php else: ?>
-                        <span style="color:#ef4444; font-size:0.85rem; font-weight:500;">
-                            ● Expired
-                        </span>
-                    <?php endif; ?>
-                </td>
-                
-                <td>
-                    <?php if(!empty($u['last_login'])): ?>
-                        <div style="font-size:0.85rem; color:#fff; font-weight:500;">
-                            <?= date('d M H:i', strtotime($u['last_login'])) ?>
-                        </div>
-                        <div style="font-size:0.75rem; color:#666; font-family:monospace;">
-                            IP: <?= htmlspecialchars($u['last_ip'] ?? '-') ?>
-                        </div>
-                    <?php else: ?>
-                        <span style="color:var(--text-muted); font-size:0.8rem; font-style:italic;">Belum login</span>
-                    <?php endif; ?>
-                </td>
-                <td style="color:var(--text-muted); font-size:0.9rem;">
-                    <?= date('d M Y', strtotime($u['created_at'])) ?>
-                </td>
-                <td>
-                    <div style="display:flex; gap:8px;">
-                        <a href="/dashboard/user_form&id=<?= $u['id'] ?>" class="btn btn-sm btn-secondary" title="Edit Detail">
-                            <i class="ri-pencil-line"></i>
-                        </a>
-                        
-                        <?php if($u['id'] != $_SESSION['user_id']): ?>
-                            <form method="POST" style="margin:0;">
-                                <input type="hidden" name="activate_id" value="<?= $u['id'] ?>">
-                                <button class="btn btn-sm" style="background:var(--primary); color:white; border:none;" title="Set VIP 30 Hari">
-                                    <i class="ri-vip-crown-fill"></i>
-                                </button>
-                            </form>
+                    </td>
 
-                            <form method="POST" onsubmit="return confirm('Yakin hapus user <?= htmlspecialchars($u['username']) ?>?');" style="margin:0;">
-                                <input type="hidden" name="delete_id" value="<?= $u['id'] ?>">
-                                <button class="btn btn-sm btn-secondary" style="color:#ef4444; border-color:#ef4444;" title="Hapus User">
-                                    <i class="ri-delete-bin-line"></i>
-                                </button>
-                            </form>
+                    <td>
+                        <?php if($u['role'] === 'admin'): ?>
+                            <span class="badge-role role-admin">
+                                <i class="ri-shield-check-fill"></i> Admin
+                            </span>
+                        <?php elseif($u['role'] === 'vip'): ?>
+                            <span class="badge-role role-vip">
+                                <i class="ri-vip-crown-2-fill"></i> VIP Member
+                            </span>
+                        <?php else: ?>
+                            <span class="badge-role role-free">
+                                <i class="ri-user-3-line"></i> Gratisan
+                            </span>
                         <?php endif; ?>
-                    </div>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
+                    </td>
+
+                    <td>
+                        <?php if($u['active_until'] && strtotime($u['active_until']) > time()): ?>
+                            <?php $days = ceil((strtotime($u['active_until']) - time())/(60*60*24)); ?>
+                            <div style="display:flex; align-items:center; gap:5px; color:#4ade80;">
+                                <i class="ri-checkbox-circle-fill"></i>
+                                <div>
+                                    <div style="font-size:0.85rem; font-weight:bold;">Aktif</div>
+                                    <div style="font-size:0.7rem; opacity:0.8;">Sisa <?= $days ?> Hari</div>
+                                </div>
+                            </div>
+                        <?php elseif($u['role'] == 'free'): ?>
+                            <span style="color:#666; font-size:0.85rem;">-</span>
+                        <?php else: ?>
+                            <div style="display:flex; align-items:center; gap:5px; color:#ef4444;">
+                                <i class="ri-close-circle-fill"></i>
+                                <span style="font-size:0.85rem; font-weight:bold;">Expired</span>
+                            </div>
+                        <?php endif; ?>
+                    </td>
+                    
+                    <td>
+                        <?php if(!empty($u['last_login'])): ?>
+                            <div style="font-size:0.85rem; color:#ddd; font-weight:500;">
+                                <i class="ri-calendar-check-line" style="color:#666; margin-right:3px;"></i>
+                                <?= date('d M H:i', strtotime($u['last_login'])) ?>
+                            </div>
+                            <div style="font-size:0.7rem; color:#666; font-family:monospace; margin-top:2px;">
+                                IP: <?= htmlspecialchars($u['last_ip'] ?? '-') ?>
+                            </div>
+                        <?php else: ?>
+                            <span style="color:var(--text-muted); font-size:0.8rem; font-style:italic;">Belum login</span>
+                        <?php endif; ?>
+                    </td>
+
+                    <td>
+                        <div style="display:flex; gap:8px;">
+                            <a href="/dashboard/user_form&id=<?= $u['id'] ?>" class="btn-icon-text btn-gray" title="Edit Detail">
+                                <i class="ri-pencil-fill"></i> <span>Edit</span>
+                            </a>
+                            
+                            <?php if($u['id'] != $_SESSION['user_id']): ?>
+                                <form method="POST" style="margin:0;">
+                                    <input type="hidden" name="activate_id" value="<?= $u['id'] ?>">
+                                    <button class="btn-icon-text btn-gold" title="Tambah VIP 30 Hari">
+                                        <i class="ri-vip-diamond-fill"></i> <span>VIP+</span>
+                                    </button>
+                                </form>
+
+                                <form method="POST" onsubmit="return confirm('Yakin hapus user <?= htmlspecialchars($u['username']) ?>?');" style="margin:0;">
+                                    <input type="hidden" name="delete_id" value="<?= $u['id'] ?>">
+                                    <button class="btn-icon-text btn-red" title="Hapus User">
+                                        <i class="ri-delete-bin-2-fill"></i>
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
