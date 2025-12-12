@@ -27,7 +27,9 @@
             
             <?php if(isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
             <div class="menu-label">ADMINISTRATOR</div>
-            
+            <a href="/dashboard/search_analytics" class="<?= (isset($view) && $view=='search_analytics') ? 'active' : '' ?>">
+                <i class="ri-bar-chart-grouped-line"></i> <span>Analitik Pencarian</span>
+            </a>
             <a href="/dashboard/users" class="<?= (isset($view) && $view=='users') ? 'active' : '' ?>">
                 <i class="ri-group-line"></i> <span>Kelola User</span>
             </a>
