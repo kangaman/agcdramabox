@@ -223,3 +223,23 @@ a:hover { color: var(--primary); }
 @media (max-width: 480px) {
     .movie-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
+
+/* --- ANIMASI LOADING SEARCH --- */
+.search-btn-icon.loading i {
+    display: none; /* Sembunyikan kaca pembesar */
+}
+
+.search-btn-icon.loading::after {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: block;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
