@@ -56,27 +56,19 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
                     overflow-x: hidden;
                 }
-                
-                /* Layout */
                 .split-screen {
                     display: flex; flex-wrap: wrap; width: 100%; max-width: 1200px;
                     gap: 40px; padding: 20px; align-items: center; justify-content: center;
                 }
                 .info-side { flex: 1; min-width: 300px; text-align: left; }
                 .game-side { flex: 1; min-width: 300px; display: flex; justify-content: center; }
-
-                /* Typography */
                 h1 { font-size: 3rem; font-weight: 800; margin: 0 0 15px 0; line-height: 1.1; }
                 h1 span { color: var(--primary); }
                 p { color: #9ca3af; line-height: 1.6; margin-bottom: 25px; }
-
-                /* Countdown */
                 .countdown { display: flex; gap: 15px; margin-bottom: 30px; }
                 .time-box { background: var(--card); padding: 10px 20px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
                 .time-box span { font-size: 1.5rem; font-weight: bold; color: var(--primary); display: block; }
                 .time-box small { font-size: 0.7rem; color: #666; text-transform: uppercase; }
-
-                /* Notify Form */
                 .notify-box { display: flex; gap: 10px; margin-bottom: 30px; }
                 .notify-box input {
                     background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
@@ -87,8 +79,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;
                 }
                 .notify-box button:hover { opacity: 0.9; }
-
-                /* GAME AREA */
                 .game-container {
                     background: #000; border: 4px solid #333; border-radius: 12px;
                     position: relative; box-shadow: 0 0 30px rgba(229, 9, 20, 0.2);
@@ -110,9 +100,7 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                 }
                 .mobile-controls { display: none; gap: 10px; margin-top: 15px; }
                 .ctrl-btn { width: 50px; height: 50px; background: #333; border-radius: 50%; border: none; color: white; font-size: 1.2rem; }
-
                 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
                 @media (max-width: 768px) {
                     .split-screen { flex-direction: column-reverse; text-align: center; }
                     .info-side { text-align: center; }
@@ -129,36 +117,30 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     <p>
                         Server sedang menjalani perawatan rutin untuk meningkatkan performa dan fitur baru. 
                         Jangan khawatir, kami akan segera kembali!
-                        <br>Sambil menunggu, yuk main game sebentar di sebelah! ðŸ‘‰
+                        <br>Sambil menunggu, yuk main game sebentar di sebelah! 👉
                     </p>
-
                     <div class="countdown">
                         <div class="time-box"><span id="h">01</span><small>Jam</small></div>
                         <div class="time-box"><span id="m">45</span><small>Menit</small></div>
                         <div class="time-box"><span id="s">30</span><small>Detik</small></div>
                     </div>
-
                     <div class="notify-box">
                         <input type="email" placeholder="Masukkan email Anda...">
                         <button onclick="alert('Terima kasih! Kami akan kabari saat website online.')">Kabari Saya</button>
                     </div>
-
                     <small style="color:#555;">&copy; <?= date('Y') ?> <?= Config::SITE_NAME ?> Engineering Team</small>
                 </div>
-
                 <div class="game-side">
                     <div>
                         <div class="game-container">
                             <div class="score-board">Score: <span id="score">0</span></div>
                             <canvas id="gameCanvas" width="300" height="300"></canvas>
-                            
                             <div id="gameOverlay" class="game-overlay">
                                 <h2 style="margin:0;">SNAKE GAME</h2>
                                 <p style="margin:5px 0; font-size:0.9rem;">Gunakan Panah Keyboard</p>
                                 <button class="start-btn" onclick="startGame()">MAIN SEKARANG</button>
                             </div>
                         </div>
-                        
                         <div class="mobile-controls">
                             <button class="ctrl-btn" onclick="changeDir('LEFT')"><i class="ri-arrow-left-line"></i></button>
                             <button class="ctrl-btn" onclick="changeDir('UP')"><i class="ri-arrow-up-line"></i></button>
@@ -168,63 +150,36 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     </div>
                 </div>
             </div>
-
             <script>
-                // 1. COUNTDOWN TIMER LOGIC
-                // Set waktu selesai maintenance (Contoh: 2 jam dari sekarang)
-                // Dalam real case, Anda bisa set timestamp spesifik
+                // GAME SCRIPT (Sama seperti sebelumnya)
                 let endTime = new Date().getTime() + (24 * 60 * 60 * 1000); 
-
                 setInterval(function() {
                     let now = new Date().getTime();
                     let dist = endTime - now;
-
-                    if (dist < 0) {
-                        // Reset waktu jika habis (Simulation)
-                        endTime = new Date().getTime() + (24 * 60 * 60 * 1000);
-                        dist = endTime - now;
-                    }
-
+                    if (dist < 0) { endTime = new Date().getTime() + (24 * 60 * 60 * 1000); dist = endTime - now; }
                     let h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     let m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
                     let s = Math.floor((dist % (1000 * 60)) / 1000);
-
                     document.getElementById("h").innerText = h < 10 ? "0" + h : h;
                     document.getElementById("m").innerText = m < 10 ? "0" + m : m;
                     document.getElementById("s").innerText = s < 10 ? "0" + s : s;
                 }, 1000);
 
-                // 2. SNAKE GAME LOGIC
                 const canvas = document.getElementById('gameCanvas');
                 const ctx = canvas.getContext('2d');
                 const overlay = document.getElementById('gameOverlay');
                 const scoreEl = document.getElementById('score');
-                
-                const box = 15; // Ukuran kotak
-                let snake = [];
-                let food = {};
-                let score = 0;
-                let d;
-                let game;
+                const box = 15;
+                let snake = []; let food = {}; let score = 0; let d; let game;
 
                 function initGame() {
-                    snake = [];
-                    snake[0] = { x: 10 * box, y: 10 * box };
-                    score = 0;
-                    d = "";
-                    scoreEl.innerText = score;
-                    createFood();
+                    snake = []; snake[0] = { x: 10 * box, y: 10 * box };
+                    score = 0; d = ""; scoreEl.innerText = score; createFood();
                 }
-
                 function createFood() {
-                    food = {
-                        x: Math.floor(Math.random() * (canvas.width/box)) * box,
-                        y: Math.floor(Math.random() * (canvas.height/box)) * box
-                    };
+                    food = { x: Math.floor(Math.random() * (canvas.width/box)) * box, y: Math.floor(Math.random() * (canvas.height/box)) * box };
                 }
-
                 document.addEventListener('keydown', direction);
-
                 function direction(event) {
                     let key = event.keyCode;
                     if(key == 37 && d != "RIGHT") d = "LEFT";
@@ -232,74 +187,37 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
                     else if(key == 39 && d != "LEFT") d = "RIGHT";
                     else if(key == 40 && d != "UP") d = "DOWN";
                 }
-                
-                // Fungsi untuk tombol HP
                 function changeDir(dir) {
                     if(dir == "LEFT" && d != "RIGHT") d = "LEFT";
                     else if(dir == "UP" && d != "DOWN") d = "UP";
                     else if(dir == "RIGHT" && d != "LEFT") d = "RIGHT";
                     else if(dir == "DOWN" && d != "UP") d = "DOWN";
                 }
-
                 function draw() {
-                    ctx.fillStyle = "#111"; // Background board
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+                    ctx.fillStyle = "#111"; ctx.fillRect(0, 0, canvas.width, canvas.height);
                     for(let i = 0; i < snake.length; i++) {
-                        ctx.fillStyle = (i == 0) ? "#e50914" : "#fff"; // Kepala Merah, Badan Putih
-                        ctx.fillRect(snake[i].x, snake[i].y, box, box);
-                        ctx.strokeStyle = "#000";
-                        ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+                        ctx.fillStyle = (i == 0) ? "#e50914" : "#fff"; ctx.fillRect(snake[i].x, snake[i].y, box, box);
+                        ctx.strokeStyle = "#000"; ctx.strokeRect(snake[i].x, snake[i].y, box, box);
                     }
-
-                    ctx.fillStyle = "#4ade80"; // Makanan Hijau
-                    ctx.fillRect(food.x, food.y, box, box);
-
-                    let snakeX = snake[0].x;
-                    let snakeY = snake[0].y;
-
-                    if(d == "LEFT") snakeX -= box;
-                    if(d == "UP") snakeY -= box;
-                    if(d == "RIGHT") snakeX += box;
-                    if(d == "DOWN") snakeY += box;
-
-                    // Makan
-                    if(snakeX == food.x && snakeY == food.y) {
-                        score++;
-                        scoreEl.innerText = score;
-                        createFood();
-                    } else {
-                        snake.pop();
-                    }
-
-                    // Game Over Logic
+                    ctx.fillStyle = "#4ade80"; ctx.fillRect(food.x, food.y, box, box);
+                    let snakeX = snake[0].x; let snakeY = snake[0].y;
+                    if(d == "LEFT") snakeX -= box; if(d == "UP") snakeY -= box;
+                    if(d == "RIGHT") snakeX += box; if(d == "DOWN") snakeY += box;
+                    if(snakeX == food.x && snakeY == food.y) { score++; scoreEl.innerText = score; createFood(); } else { snake.pop(); }
                     let newHead = { x: snakeX, y: snakeY };
-
                     if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
-                        clearInterval(game);
-                        overlay.style.display = "flex";
+                        clearInterval(game); overlay.style.display = "flex";
                         document.querySelector('#gameOverlay h2').innerText = "GAME OVER";
-                        document.querySelector('.start-btn').innerText = "MAIN LAGI";
-                        return;
+                        document.querySelector('.start-btn').innerText = "MAIN LAGI"; return;
                     }
-
                     snake.unshift(newHead);
                 }
-
                 function collision(head, array) {
-                    for(let i = 0; i < array.length; i++) {
-                        if(head.x == array[i].x && head.y == array[i].y) return true;
-                    }
-                    return false;
+                    for(let i = 0; i < array.length; i++) { if(head.x == array[i].x && head.y == array[i].y) return true; } return false;
                 }
-
                 function startGame() {
-                    overlay.style.display = "none";
-                    initGame();
-                    // Set default gerak ke kanan biar gak diem
-                    d = "RIGHT"; 
-                    if(game) clearInterval(game);
-                    game = setInterval(draw, 190); // Kecepatan game (makin kecil makin cepat)
+                    overlay.style.display = "none"; initGame(); d = "RIGHT"; 
+                    if(game) clearInterval(game); game = setInterval(draw, 190);
                 }
             </script>
         </body>
@@ -308,9 +226,6 @@ if (defined('Config::MAINTENANCE_MODE') && Config::MAINTENANCE_MODE) {
         exit; // Hentikan script
     }
 }
-
-
-
 
 // 5. SESSION SECURITY & RATE LIMITING
 ini_set('session.cookie_httponly', 1);
@@ -332,7 +247,7 @@ if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 5) {
     $lockout_time = $_SESSION['lockout_time'] ?? 0;
     if (time() - $lockout_time < 900) { 
         die("<div style='text-align:center;padding:50px;font-family:sans-serif;'>
-                <h1>â›” Akses Dibatasi</h1>
+                <h1>⛔ Akses Dibatasi</h1>
                 <p>Terlalu banyak percobaan login gagal.</p>
                 <p>Silakan coba lagi dalam 15 menit.</p>
              </div>");
@@ -373,10 +288,8 @@ if ($page === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /dashboard");
         exit;
     } elseif ($loginStatus === 'banned') {
-        // [BARU] Handle jika user dibanned
         $error = "Akun Anda telah DIBLOKIR karena pelanggaran rules.";
     } else {
-        // Handle password salah
         $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
         if ($_SESSION['login_attempts'] >= 5) $_SESSION['lockout_time'] = time();
         $error = "Username atau Password Salah!";
@@ -433,7 +346,6 @@ if ($page !== 'login' && $page !== 'register') {
 switch($page) {
     case 'home':
         $p = $_GET['p'] ?? 1;
-        // Pass parameter $source ke fungsi getHome
         $data = $api->getHome($p, $source);
         include 'views/public/home.php';
         break;
@@ -441,7 +353,22 @@ switch($page) {
     case 'search':
         $q = $_GET['q'] ?? '';
         $p = $_GET['p'] ?? 1; 
-        // Pass parameter $source ke fungsi search
+        
+        // --- [MULAI BARU] LOG PENCARIAN ---
+        // Mencatat keyword pencarian ke database untuk analitik
+        if (!empty($q) && $p == 1) { 
+            try {
+                $dbLog = (new Database())->getConnection();
+                $uId = $_SESSION['user_id'] ?? NULL;
+                $ip = $_SERVER['REMOTE_ADDR'];
+                
+                // Simpan ke tabel search_logs
+                $sqlLog = "INSERT INTO search_logs (keyword, source, user_id, ip_address) VALUES (?, ?, ?, ?)";
+                $dbLog->prepare($sqlLog)->execute([$q, $source, $uId, $ip]);
+            } catch (Exception $e) { /* Silent error agar user tidak terganggu */ }
+        }
+        // --- [SELESAI BARU] ---
+
         $data = $api->search($q, $p, $source);
         include 'views/public/home.php';
         break;
@@ -449,18 +376,13 @@ switch($page) {
     case 'watch':
         $id = $_GET['id'] ?? null;
         if($id) {
-            // [UPDATE] Ambil detail berdasarkan source
             $data = $api->getDetail($id, $source);
             
-            // [FIX VALIDASI] ApiHandler sekarang menormalisasi data Melolo 
-            // menjadi struktur yang sama dengan Dramabox: ['data']['dramaInfo']
             $isValid = false;
-            
-            // Cek apakah dramaInfo ada (Berlaku untuk Dramabox & Melolo yang sudah dinormalisasi)
+            // Validasi Data
             if (isset($data['data']['dramaInfo']) || isset($data['dramaInfo'])) {
                 $isValid = true;
             }
-            // Fallback: Cek data raw jika normalisasi gagal
             else if (!empty($data) && (isset($data['book_id']) || isset($data['title']) || isset($data['data']['book_name']))) {
                 $isValid = true;
             }
@@ -468,9 +390,6 @@ switch($page) {
             if($isValid) {
                 include 'views/public/watch.php';
             } else {
-                // Debugging: Jika masih error, uncomment baris bawah untuk lihat isi data asli
-                // echo "<pre style='color:white'>"; print_r($data); echo "</pre>";
-                
                 echo "<div class='container' style='padding:100px; text-align:center; color:white;'>
                         <h3 style='font-size: 2rem; margin-bottom: 20px;'>Drama tidak ditemukan :(</h3>
                         <p style='color:#ccc;'>Mungkin ID salah atau Server <b>" . ucfirst($source) . "</b> sedang sibuk.</p>
@@ -537,7 +456,7 @@ switch($page) {
         exit; 
         break;
         
-    // 2. [WAJIB ADA] API Proxy untuk Streaming Melolo
+    // 2. API Proxy Stream
     case 'api_get_stream':
         ob_end_clean();
         header('Content-Type: application/json');
