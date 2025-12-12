@@ -15,11 +15,15 @@
     $siteName = $webConfig['site_name'] ?? Config::SITE_NAME;
     $siteDesc = $webConfig['site_desc'] ?? Config::SITE_DESC;
     
+    // Cek status VIP untuk logika iklan (Global di Header)
+    $isVipUser = isset($_SESSION['role']) && $_SESSION['role'] === 'vip';
+    
     // Setup Meta Tags
     $metaTitle = isset($pageTitle) ? $pageTitle . ' - ' . $siteName : $siteName;
     $metaDesc = $siteDesc;
     
     // Default Image (Logo)
+    // Pastikan Anda punya file logo.png di folder assets/images/
     $metaImage = 'https://' . $_SERVER['HTTP_HOST'] . '/assets/images/logo.png'; 
     
     // Jika sedang di halaman Nonton (Data dari watch.php), overwrite meta tags
@@ -62,8 +66,8 @@
 </head>
 <body>
 
-    <?php if(!empty($webConfig['ad_header'])): ?>
-    <div class="ad-container-header" style="text-align:center; padding:0; background:#000;">
+    <?php if(!empty($webConfig['ad_header']) && !$isVipUser): ?>
+    <div class="ad-container-header" style="text-align:center; padding:0; background:#000; z-index: 999; position: relative;">
         <?= $webConfig['ad_header'] ?>
     </div>
     <?php endif; ?>
@@ -96,9 +100,7 @@
     function handleSearch(form) {
         var k = form.q.value.trim();
         if(k) {
-            // Redirect ke URL ?page=search&q=... atau format SEO friendly
-            // Karena index.php menghandle page=search, kita gunakan input hidden di form atau redirect manual
-            // Jika format URL Anda /cari/Judul, gunakan ini:
+            // Redirect ke URL ?page=search&q=... 
             window.location.href = '/?page=search&q=' + encodeURIComponent(k);
         }
     }
