@@ -84,9 +84,9 @@ global $webConfig;
             </div>
         </div>
 
-        <?php if(!empty($webConfig['ad_player'])): ?>
+        <?php if(!empty($webConfig['ad_player']) && !$isVip): ?>
         <div class="ad-player-slot">
-            <small>ADVERTISEMENT</small>
+            <small>ADVERTISEMENT (Hilang jika VIP)</small>
             <div class="ad-content">
                 <?= $webConfig['ad_player'] ?>
             </div>
@@ -405,7 +405,7 @@ function checkBookmark() {
 
 function reportVideo() {
     var msg = `Lapor Min, Video Error:\nJudul: ${dramaTitle}\nEpisode: ${currentEpNum}\nID: ${dramaId}`;
-    var url = `https://t.me/jejakintel?text=` + encodeURIComponent(msg); // Ganti username telegram Anda
+    var url = `https://t.me/jejakintel?text=` + encodeURIComponent(msg); // Ganti dengan username telegram Anda
     if(confirm("Video error? Laporkan ke Admin via Telegram?")) {
         window.open(url, '_blank');
     }
