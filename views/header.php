@@ -10,43 +10,74 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <?php 
-    // [UPDATE] Ambil Konfigurasi Dinamis dari Database ($webConfig dari index.php)
-    // Jika $webConfig belum ada, fallback ke Config bawaan
+    // 1. AMBIL KONFIGURASI UTAMA
+    // Menggunakan data dari database ($webConfig) atau fallback ke Config.php
     $siteName = $webConfig['site_name'] ?? Config::SITE_NAME;
     $siteDesc = $webConfig['site_desc'] ?? Config::SITE_DESC;
     
-    // Cek status VIP untuk logika iklan (Global di Header)
+    // Cek status VIP untuk logika iklan
     $isVipUser = isset($_SESSION['role']) && $_SESSION['role'] === 'vip';
     
-    // Setup Meta Tags
-    $metaTitle = isset($pageTitle) ? $pageTitle . ' - ' . $siteName : $siteName;
+    // 2. LOGIKA META TAG SEO DINAMIS
+    
+    // Default Values (Halaman Home)
+    $metaTitle = $siteName . ' - ' . $siteDesc;
     $metaDesc = $siteDesc;
-    
-    // Default Image (Logo)
-    // Pastikan Anda punya file logo.png di folder assets/images/
     $metaImage = 'https://' . $_SERVER['HTTP_HOST'] . '/assets/images/logo.png'; 
-    
-    // Jika sedang di halaman Nonton (Data dari watch.php), overwrite meta tags
+    $urlNow = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+    $metaKeywords = "nonton drama china, streaming drakor, drama asia sub indo, posdrama, drachin terbaru, nonton gratis";
+
+    // KONDISI 1: HALAMAN NONTON (Watch)
     if(isset($info) && is_array($info)) {
-        $metaTitle = htmlspecialchars($info['bookName']) . " - " . $siteName;
-        // Ambil 150 karakter pertama dari sinopsis untuk deskripsi
-        $metaDesc = "Nonton " . htmlspecialchars($info['bookName']) . " Subtitle Indonesia. " . mb_strimwidth(htmlspecialchars($info['introduction']), 0, 150, "...");
+        $cleanTitle = htmlspecialchars($info['bookName']);
+        
+        // [SEO TITLE] Format: Judul - Nonton Subtitle Indonesia | NamaWeb
+        $metaTitle = "$cleanTitle - Nonton Subtitle Indonesia | $siteName";
+        
+        // [SEO DESC] Ambil sinopsis, bersihkan tag HTML, potong 160 karakter
+        $cleanIntro = strip_tags($info['introduction'] ?? '');
+        // Hapus newlines berlebih
+        $cleanIntro = preg_replace('/\s+/', ' ', $cleanIntro);
+        $summary = mb_strimwidth($cleanIntro, 0, 160, "...");
+        
+        $metaDesc = "Nonton streaming $cleanTitle subtitle Indonesia gratis. $summary Streaming drama Asia kualitas HD di $siteName.";
+        
         $metaImage = $info['cover'];
+        
+        // Tambahkan judul ke keywords
+        $metaKeywords .= ", " . strtolower($cleanTitle) . " sub indo, nonton " . strtolower($cleanTitle);
+    }
+    
+    // KONDISI 2: HALAMAN PENCARIAN
+    elseif (isset($_GET['page']) && $_GET['page'] === 'search') {
+        $keyword = htmlspecialchars($_GET['q'] ?? '');
+        $metaTitle = "Cari: $keyword - Nonton Sub Indo | $siteName";
+        $metaDesc = "Hasil pencarian drama $keyword subtitle Indonesia terlengkap dan gratis di $siteName.";
+    }
+
+    // KONDISI 3: HALAMAN STATIS LAIN (Terms/Login/dll)
+    elseif (isset($pageTitle)) {
+        $metaTitle = "$pageTitle | $siteName";
     }
     ?>
 
     <meta name="apple-mobile-web-app-title" content="<?= $siteName ?>">
+    
     <title><?= $metaTitle ?></title>
     <meta name="description" content="<?= $metaDesc ?>">
+    <meta name="keywords" content="<?= $metaKeywords ?>">
+    <meta name="robots" content="index, follow">
     
     <meta property="og:type" content="website">
     <meta property="og:title" content="<?= $metaTitle ?>">
     <meta property="og:description" content="<?= $metaDesc ?>">
     <meta property="og:image" content="<?= $metaImage ?>">
-    <meta property="og:url" content="<?= (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]" ?>">
+    <meta property="og:url" content="<?= $urlNow ?>">
+    <meta property="og:site_name" content="<?= $siteName ?>">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?= $metaTitle ?>">
+    <meta name="twitter:description" content="<?= $metaDesc ?>">
     <meta name="twitter:image" content="<?= $metaImage ?>">
 
     <script>
