@@ -351,12 +351,18 @@ function setFlash($icon, $title, $text) {
 
 // Login Handler
 if ($page === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($auth->login($_POST['username'], $_POST['password'])) {
+    $loginStatus = $auth->login($_POST['username'], $_POST['password']);
+    
+    if ($loginStatus === true) {
         unset($_SESSION['login_attempts']); 
         setFlash('success', 'Login Berhasil', 'Selamat datang kembali!');
         header("Location: /dashboard");
         exit;
+    } elseif ($loginStatus === 'banned') {
+        // [BARU] Handle jika user dibanned
+        $error = "Akun Anda telah DIBLOKIR karena pelanggaran rules.";
     } else {
+        // Handle password salah
         $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
         if ($_SESSION['login_attempts'] >= 5) $_SESSION['lockout_time'] = time();
         $error = "Username atau Password Salah!";
