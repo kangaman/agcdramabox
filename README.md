@@ -1,74 +1,52 @@
-# 🎬 AGC DramaBox v2 — Platform Streaming + Admin Dashboard + PWA
+# 🎬 AGC DramaBox v2 — Modern Streaming Platform with PWA & Admin Dashboard
 
 ![PHP](https://img.shields.io/badge/PHP-8.0+-777BB4?style=for-the-badge&logo=php)
-![MySQL](https://img.shields.io/badge/Database-MySQL-4479A1?style=for-the-badge&logo=mysql)
-![PWA](https://img.shields.io/badge/PWA-Supported-5A0FC8?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-2.0-brightgreen?style=for-the-badge)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql)
+![PWA](https://img.shields.io/badge/PWA-Optimized-5A0FC8?style=for-the-badge)
+![Release](https://img.shields.io/badge/Release-v2.0-brightgreen?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Free-blue?style=for-the-badge)
 
-**AGC DramaBox v2** adalah versi terbaru dari platform streaming berbasis PHP Native yang dirancang ringan, cepat, dan modular. Versi ini hadir dengan pembaruan besar pada frontend, backend, API, dan performa aplikasi.
+AGC DramaBox v2 memperkenalkan standar baru dalam platform streaming berbasis PHP Native.  
+Dirancang dengan pendekatan **ultra-lightweight**, **super responsif**, dan **mudah dikembangkan**, versi terbaru ini memadukan pengalaman menonton yang mulus dengan kontrol penuh melalui Admin Dashboard yang modern.
 
----
-
-# 📌 Changelog  
-## **Versi 1 → Versi 2 (Perubahan Besar)**
-
-### 🔥 **Perubahan di Versi 2**
-- Desain UI baru yang lebih modern dan responsif.
-- Dashboard admin diringankan & diperbarui total.
-- API internal dipusatkan dalam `ApiHandler.php`.
-- Struktur aplikasi dirapikan agar lebih scalable.
-- Service Worker PWA lebih stabil.
-- Penambahan caching & optimasi performa.
-- Penghapusan fitur yang memperberat aplikasi (VIP system, statistik berat, player HLS.js, Chart.js, DataTables).
-- Struktur folder disederhanakan.
-
-### 🧩 **Fitur yang Dihapus dari Versi 1**
-- Sistem membership VIP.
-- Auto next episode player & HLS.js.
-- Statistik grafik admin (Chart.js).
-- DataTables tabel interaktif.
-- Sistem riwayat tontonan & favorit terintegrasi database.
-- Maintenance mode dengan mini-game.
-- Sistem backup database otomatis.
-
-### 🎯 **Fokus Baru di Versi 2**
-- Kecepatan akses.
-- Kesederhanaan struktur kode.
-- Kemudahan pengembangan.
-- Dashboard minimalis namun efisien.
-- Integrasi PWA yang stabil.
+Dengan tampilan baru yang lebih elegan, performa yang jauh lebih cepat, serta integrasi PWA yang semakin stabil—AGC DramaBox v2 menjadi pilihan ideal untuk kebutuhan streaming mandiri, portal komunitas, project edukasi, atau produk komersial yang ingin tumbuh secara fleksibel.
 
 ---
 
-# ✨ Fitur Utama AGC DramaBox v2
+# ⭐ Fitur Utama (Versi 2)
 
-## 📱 **Frontend (Pengguna)**
-- UI modern, ringan, responsif.
-- PWA siap diinstal seperti aplikasi.
-- Halaman home & detail video clean dan cepat.
-- Performa tinggi berkat caching halaman & asset.
-
----
-
-## 🛠️ **Backend (Admin)**
-- Login admin sederhana & aman.
-- Dashboard baru untuk manajemen konten.
-- API terpusat (`ApiHandler.php`).
-- Konfigurasi mudah melalui `Config.php`.
+## 🔥 Pengalaman Pengguna (Frontend)
+- **Desain baru yang lebih modern & profesional** — Meniru kualitas platform streaming premium.
+- **Performa super cepat** — Optimasi loading dan caching bawaan.
+- **PWA-ready**  
+  Instal ke device seperti aplikasi native.
+- **Navigasi lebih intuitif** — Fokus pada kemudahan menonton.
+- **Halaman detail konten yang bersih & rapi**  
+  Cocok untuk film, drama series, dokumenter, dan lainnya.
 
 ---
 
-## 🔎 Optimasi & Infrastruktur
-- PWA support: manifest + service worker.
-- SEO basic:
-  - sitemap otomatis  
-  - robots.txt  
-- Struktur folder rapi & mudah dipelihara.
-- Keamanan dasar dengan `.htaccess` & sanitasi input.
+## 🛠️ Admin Dashboard (Backend)
+- **Panel admin simpel & efisien** — Dirancang untuk bekerja cepat tanpa fitur yang membebani.
+- **Manajemen konten terpusat** — Tambah/update konten tanpa plugin eksternal.
+- **Sistem autentikasi aman** (session-based).
+- **API modular & bersih**  
+  Semua request dikendalikan melalui `ApiHandler.php`.
 
 ---
 
-# 📂 Struktur Folder
+## 🚀 Keunggulan Teknis & Marketing Value
+- **Ringan & cepat** → Cocok untuk shared hosting.
+- **Tanpa dependensi besar** → Maintenance sangat mudah.
+- **Struktur kode bersih** → Siap dikembangkan menjadi platform besar.
+- **SEO-ready** dengan robots.txt & sitemap otomatis.
+- **PWA bawaan** → Keunggulan kompetitif untuk user retention.
+- **Tampilan profesional** → Meningkatkan kepercayaan pengguna.
+
+---
+
+# 📂 Struktur Direktori
 
 ```
 app/
@@ -101,27 +79,63 @@ sw.js
 
 ---
 
-# 🚀 Cara Menggunakan
+# 🚀 Cara Deploy
+1. Upload file ke hosting atau localhost.
+2. Sesuaikan database pada `Config.php`.
+3. Akses aplikasi langsung dari browser.
+4. Login ke Admin Dashboard untuk mengelola konten.
 
-1. Upload project ke hosting / localhost.  
-2. Atur database di `Config.php`.  
-3. Buka aplikasi di browser.  
-4. Gunakan dashboard admin untuk mengelola konten.
-
-Versi ini dirancang **plug-and-play** tanpa setup kompleks.
-
----
-
-# 🤝 Kontribusi
-
-Kontribusi sangat dibuka untuk:
-- fitur player baru  
-- integrasi API konten  
-- analitik ringan  
-- penambahan modul admin  
+Tidak ada instalasi tambahan — **plug and play**.
 
 ---
 
-# 📝 Lisensi  
-Bebas digunakan untuk belajar, pengembangan, atau proyek internal.
+# 🛡️ Keamanan
+- Folder sensitif dilindungi `.htaccess`
+- Validasi input API
+- Session-based authentication
+- Struktur modular → meminimalkan risiko keamanan
+
+---
+
+# 🤝 Kontribusi & Pengembangan Lanjutan
+Terbuka untuk:
+- Integrasi player lanjutan (HLS / DASH)
+- Modul analytics ringan
+- Integrasi API konten eksternal
+- Sistem kategori & filter konten
+- Multi-admin role
+
+---
+
+# 📌 Changelog  
+## **Versi 1 → Versi 2**
+
+### ⭐ Pembaruan Besar di Versi 2
+- UI baru yang lebih bersih dan profesional.
+- Dashboard admin seluruhnya diperbarui.
+- API internal dipusatkan & disederhanakan.
+- Service Worker PWA diperbaiki & distabilkan.
+- Kinerja aplikasi meningkat signifikan.
+- Penyederhanaan struktur kode untuk skalabilitas jangka panjang.
+
+### ❌ Fitur yang Dihapus (untuk efisiensi)
+- Sistem VIP & membership.
+- Player HLS.js dengan auto-next episode.
+- Statistik admin berbasis Chart.js.
+- DataTables interaktif.
+- Sistem riwayat tontonan & favorit berbasis database.
+- Backup database otomatis.
+- Maintenance mode dengan mini-game.
+
+### 🎯 Alasan Penghapusan
+Agar aplikasi:
+- lebih cepat,
+- lebih ringan,
+- lebih mudah dikembangkan,
+- lebih stabil di environment hosting apa pun.
+
+---
+
+# 📝 Lisensi
+Proyek ini bebas digunakan untuk tujuan pendidikan, komersial, dan pengembangan mandiri.
 
