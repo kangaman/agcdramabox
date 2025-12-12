@@ -117,23 +117,6 @@ Terbuka untuk:
 - Service Worker PWA diperbaiki & distabilkan.
 - Kinerja aplikasi meningkat signifikan.
 - Penyederhanaan struktur kode untuk skalabilitas jangka panjang.
-
-### ❌ Fitur yang Dihapus (untuk efisiensi)
-- Sistem VIP & membership.
-- Player HLS.js dengan auto-next episode.
-- Statistik admin berbasis Chart.js.
-- DataTables interaktif.
-- Sistem riwayat tontonan & favorit berbasis database.
-- Backup database otomatis.
-- Maintenance mode dengan mini-game.
-
-### 🎯 Alasan Penghapusan
-Agar aplikasi:
-- lebih cepat,
-- lebih ringan,
-- lebih mudah dikembangkan,
-- lebih stabil di environment hosting apa pun.
-
 ---
 
 # 📝 Lisensi
