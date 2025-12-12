@@ -8,33 +8,30 @@
     <meta name="theme-color" content="#e50914">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="<?= Config::SITE_NAME ?>">
     
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('PWA Service Worker Registered!'))
-                    .catch(err => console.log('PWA Error:', err));
-            });
-        }
-    </script>
-
     <?php 
-    // Default Values
-    $metaTitle = isset($pageTitle) ? $pageTitle . ' - ' . Config::SITE_NAME : Config::SITE_NAME;
-    $metaDesc = Config::SITE_DESC ?? "Nonton Drama Asia Subtitle Indonesia Gratis.";
-    // Pastikan Anda punya file logo.png di folder assets/images/ atau ganti link ini
+    // [UPDATE] Ambil Konfigurasi Dinamis dari Database ($webConfig dari index.php)
+    // Jika $webConfig belum ada, fallback ke Config bawaan
+    $siteName = $webConfig['site_name'] ?? Config::SITE_NAME;
+    $siteDesc = $webConfig['site_desc'] ?? Config::SITE_DESC;
+    
+    // Setup Meta Tags
+    $metaTitle = isset($pageTitle) ? $pageTitle . ' - ' . $siteName : $siteName;
+    $metaDesc = $siteDesc;
+    
+    // Default Image (Logo)
     $metaImage = 'https://' . $_SERVER['HTTP_HOST'] . '/assets/images/logo.png'; 
     
-    // Jika sedang di halaman Nonton (Data dari watch.php)
+    // Jika sedang di halaman Nonton (Data dari watch.php), overwrite meta tags
     if(isset($info) && is_array($info)) {
-        $metaTitle = htmlspecialchars($info['bookName']) . " - " . Config::SITE_NAME;
+        $metaTitle = htmlspecialchars($info['bookName']) . " - " . $siteName;
+        // Ambil 150 karakter pertama dari sinopsis untuk deskripsi
         $metaDesc = "Nonton " . htmlspecialchars($info['bookName']) . " Subtitle Indonesia. " . mb_strimwidth(htmlspecialchars($info['introduction']), 0, 150, "...");
         $metaImage = $info['cover'];
     }
     ?>
-    
+
+    <meta name="apple-mobile-web-app-title" content="<?= $siteName ?>">
     <title><?= $metaTitle ?></title>
     <meta name="description" content="<?= $metaDesc ?>">
     
@@ -48,19 +45,34 @@
     <meta name="twitter:title" content="<?= $metaTitle ?>">
     <meta name="twitter:image" content="<?= $metaImage ?>">
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('PWA Service Worker Registered!'))
+                    .catch(err => console.log('PWA Error:', err));
+            });
+        }
+    </script>
+
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
-    
     <link rel="stylesheet" href="/assets/style.css?v=<?= time() ?>">
 </head>
 <body>
+
+    <?php if(!empty($webConfig['ad_header'])): ?>
+    <div class="ad-container-header" style="text-align:center; padding:0; background:#000;">
+        <?= $webConfig['ad_header'] ?>
+    </div>
+    <?php endif; ?>
     
     <nav class="navbar">
         <div class="container nav-content">
             <a href="/" class="brand">
                 <i class="ri-movie-2-fill brand-icon"></i>
-                <span><?= Config::SITE_NAME ?></span>
+                <span><?= $siteName ?></span>
             </a>
             
             <div class="search-wrapper">
@@ -84,8 +96,10 @@
     function handleSearch(form) {
         var k = form.q.value.trim();
         if(k) {
-            // Redirect ke URL /cari/Judul%20Film
-            window.location.href = '/cari/' + encodeURIComponent(k);
+            // Redirect ke URL ?page=search&q=... atau format SEO friendly
+            // Karena index.php menghandle page=search, kita gunakan input hidden di form atau redirect manual
+            // Jika format URL Anda /cari/Judul, gunakan ini:
+            window.location.href = '/?page=search&q=' + encodeURIComponent(k);
         }
     }
     </script>
