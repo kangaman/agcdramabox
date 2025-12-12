@@ -1,124 +1,147 @@
-# 🎬 AGC DramaBox v2 — Modern Streaming Platform with PWA & Admin Dashboard
+# 🎬 AGC DramaBox v2  
+### **Next-Generation Lightweight Streaming Platform • PWA-Optimized • Admin Dashboard Included**
 
 ![PHP](https://img.shields.io/badge/PHP-8.0+-777BB4?style=for-the-badge&logo=php)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql)
 ![PWA](https://img.shields.io/badge/PWA-Optimized-5A0FC8?style=for-the-badge)
+![UI](https://img.shields.io/badge/UI-Modern%20Dark%20Theme-black?style=for-the-badge)
 ![Release](https://img.shields.io/badge/Release-v2.0-brightgreen?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/Maintained-Yes-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Free-blue?style=for-the-badge)
 
-AGC DramaBox v2 memperkenalkan standar baru dalam platform streaming berbasis PHP Native.  
-Dirancang dengan pendekatan **ultra-lightweight**, **super responsif**, dan **mudah dikembangkan**, versi terbaru ini memadukan pengalaman menonton yang mulus dengan kontrol penuh melalui Admin Dashboard yang modern.
-
-Dengan tampilan baru yang lebih elegan, performa yang jauh lebih cepat, serta integrasi PWA yang semakin stabil—AGC DramaBox v2 menjadi pilihan ideal untuk kebutuhan streaming mandiri, portal komunitas, project edukasi, atau produk komersial yang ingin tumbuh secara fleksibel.
+AGC DramaBox v2 adalah platform streaming ringan yang dirancang untuk menghadirkan pengalaman menonton yang **modern, cepat, dan stabil** dengan teknologi PHP Native & PWA.  
+Versi ini membawa pembaruan besar dengan fokus pada **desain premium**, **kecepatan**, dan **kemudahan pengembangan**, menjadikannya ideal untuk proyek streaming mandiri, portal komunitas, maupun produk komersial skala kecil hingga menengah.
 
 ---
 
-# ⭐ Fitur Utama (Versi 2)
+# 🌟 **Fitur Unggulan**
 
-## 🔥 Pengalaman Pengguna (Frontend)
-- **Desain baru yang lebih modern & profesional** — Meniru kualitas platform streaming premium.
-- **Performa super cepat** — Optimasi loading dan caching bawaan.
-- **PWA-ready**  
-  Instal ke device seperti aplikasi native.
-- **Navigasi lebih intuitif** — Fokus pada kemudahan menonton.
-- **Halaman detail konten yang bersih & rapi**  
-  Cocok untuk film, drama series, dokumenter, dan lainnya.
+## 🎥 **Pengalaman Pengguna (Frontend)**
+- ✨ UI dark mode modern dan profesional  
+- ⚡ Performa super cepat berkat optimasi aset & caching  
+- 📱 Siap instal sebagai aplikasi melalui PWA  
+- 🎬 Halaman home & detail konten yang bersih dan fokus pada user experience  
+- 🔍 Navigasi intuitif dengan tampilan minimalis  
 
 ---
 
-## 🛠️ Admin Dashboard (Backend)
-- **Panel admin simpel & efisien** — Dirancang untuk bekerja cepat tanpa fitur yang membebani.
-- **Manajemen konten terpusat** — Tambah/update konten tanpa plugin eksternal.
-- **Sistem autentikasi aman** (session-based).
-- **API modular & bersih**  
-  Semua request dikendalikan melalui `ApiHandler.php`.
+## 🛠️ **Admin Dashboard (Backend)**
+- 🔐 Sistem login aman berbasis session  
+- 📊 Dashboard ringan, bebas plugin berat  
+- 🧩 API modular terpusat dalam `ApiHandler.php`  
+- 🗂️ Manajemen konten efisien & cepat  
+- ⚙️ Konfigurasi fleksibel melalui file sederhana tanpa kompleksitas framework  
 
 ---
 
-## 🚀 Keunggulan Teknis & Marketing Value
-- **Ringan & cepat** → Cocok untuk shared hosting.
-- **Tanpa dependensi besar** → Maintenance sangat mudah.
-- **Struktur kode bersih** → Siap dikembangkan menjadi platform besar.
-- **SEO-ready** dengan robots.txt & sitemap otomatis.
-- **PWA bawaan** → Keunggulan kompetitif untuk user retention.
-- **Tampilan profesional** → Meningkatkan kepercayaan pengguna.
+# 🚀 **Keunggulan Teknis**
+- Tanpa framework — **ultra lightweight**  
+- SEO-friendly (sitemap & robots otomatis)  
+- PWA stabil dengan offline caching  
+- Struktur file bersih & mudah dikembangkan  
+- Kompatibel dengan shared hosting  
 
 ---
 
-# 📂 Struktur Direktori
+# 📂 **Struktur Direktori**
 
 ```
 app/
-│── ApiHandler.php
-│── Auth.php
-│── Config.php
-└── Database.php
+│── ApiHandler.php        → API internal
+│── Auth.php              → Sistem login admin
+│── Config.php            → Pengaturan utama
+└── Database.php          → Koneksi database
 
 assets/
-│── dashboard.css
-└── style.css
+│── style.css             → Styling frontend
+└── dashboard.css         → Styling admin dashboard
 
 views/
-│── public/
-│── dashboard/
-│── auth/
+│── public/               → Tampilan frontend pengguna
+│── dashboard/            → Panel admin
+│── auth/                 → Halaman login
 ├── header.php
 ├── footer.php
 └── home.php
 
-backups/
-cache/
+backups/                  → Folder backup (dilindungi)
+cache/                    → Cache hasil proses
 
-index.php
-manifest.json
-robots.txt
-sitemap.php
-sw.js
+index.php                 → Main router
+manifest.json             → Metadata PWA
+sw.js                     → Service Worker
+sitemap.php               → Sitemap otomatis
+robots.txt                → SEO rules
 ```
 
 ---
 
-# 🚀 Cara Deploy
-1. Upload file ke hosting atau localhost.
-2. Sesuaikan database pada `Config.php`.
-3. Akses aplikasi langsung dari browser.
-4. Login ke Admin Dashboard untuk mengelola konten.
+# 🚀 **Cara Deploy**
+1. Upload semua file ke server / localhost.  
+2. Edit konfigurasi database di:
+```
+app/Config.php
+```
+3. Buka URL aplikasi di browser.  
+4. Login ke dashboard untuk mengelola konten.  
 
-Tidak ada instalasi tambahan — **plug and play**.
-
----
-
-# 🛡️ Keamanan
-- Folder sensitif dilindungi `.htaccess`
-- Validasi input API
-- Session-based authentication
-- Struktur modular → meminimalkan risiko keamanan
+Aplikasi langsung berjalan — **tanpa build step, tanpa dependency tambahan**.
 
 ---
 
-# 🤝 Kontribusi & Pengembangan Lanjutan
-Terbuka untuk:
-- Integrasi player lanjutan (HLS / DASH)
-- Modul analytics ringan
-- Integrasi API konten eksternal
-- Sistem kategori & filter konten
-- Multi-admin role
+# 🔐 **Keamanan**
+- Validasi input  
+- Proteksi folder sensitif dengan `.htaccess`  
+- Session login aman  
+- Struktur modular → memperkecil risiko eksploitasi  
 
 ---
 
-# 📌 Changelog  
-## **Versi 1 → Versi 2**
+# 🧭 **Roadmap Fitur Mendatang**
+| Fitur | Status |
+|-------|--------|
+| Player HLS/DASH modern | Opsional |
+| Sistem kategori konten | Rencana |
+| Global search | Rencana |
+| Multi-admin role | Rencana |
+| Analytics ringan | Opsional |
+| Auto-grabber konten | Opsional |
 
-### ⭐ Pembaruan Besar di Versi 2
-- UI baru yang lebih bersih dan profesional.
-- Dashboard admin seluruhnya diperbarui.
-- API internal dipusatkan & disederhanakan.
-- Service Worker PWA diperbaiki & distabilkan.
-- Kinerja aplikasi meningkat signifikan.
-- Penyederhanaan struktur kode untuk skalabilitas jangka panjang.
 ---
 
-# 📝 Lisensi
-Proyek ini bebas digunakan untuk tujuan pendidikan, komersial, dan pengembangan mandiri.
+# 📌 **Changelog: Versi 1 → Versi 2**
+
+## ✨ Pembaruan Besar
+- Desain UI diperbarui total  
+- Dashboard admin dibuat lebih ringan & fokus  
+- API internal direstrukturisasi agar lebih efisien  
+- PWA lebih stabil dengan perbaikan caching  
+- Performa aplikasi meningkat signifikan  
+- Struktur folder dibuat lebih bersih & scalable  
+
+## 🧹 Fitur dari Versi 1 yang Dihapus
+- Sistem VIP & membership  
+- Player HLS.js auto next episode  
+- Statistik Chart.js  
+- DataTables pada admin  
+- Fitur riwayat tontonan & favorit  
+- Backup database otomatis  
+- Maintenance mode mini-game  
+
+## 🎯 Alasan Penghapusan
+Untuk menjadikan aplikasi:  
+- lebih cepat  
+- lebih stabil  
+- lebih scalable  
+- lebih fokus pada core functionality  
+
+---
+
+# 📝 **Lisensi**
+AGC DramaBox v2 bebas digunakan untuk proyek komersial, pembelajaran, dan pengembangan mandiri.
+
+---
+
+Terima kasih telah menggunakan AGC DramaBox v2!  
+Jika Anda ingin menambahkan fitur baru, membuka kontribusi, atau melakukan integrasi tingkat lanjut — silakan lanjutkan pengembangan sesuai kebutuhan Anda.
 
