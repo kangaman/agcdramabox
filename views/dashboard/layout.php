@@ -4,53 +4,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - <?= Config::SITE_NAME ?></title>
+    <title>Dashboard - <?= defined('Config::SITE_NAME') ? Config::SITE_NAME : 'DramaFlix' ?></title>
     
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    
     <link rel="stylesheet" href="/assets/dashboard.css?v=<?= time() ?>">
 </head>
 <body>
 
     <aside class="sidebar" id="sidebar">
         <div class="brand">
-            <i class="ri-movie-2-fill" style="margin-right:10px;"></i> <?= Config::SITE_NAME ?>
+            <i class="ri-movie-2-fill" style="margin-right:10px;"></i> 
+            <?= defined('Config::SITE_NAME') ? Config::SITE_NAME : 'Dashboard' ?>
         </div>
         
         <nav class="menu">
             <div class="menu-label">MENU UTAMA</div>
-            <a href="/dashboard" class="<?= $view=='overview'?'active':'' ?>">
+            <a href="/dashboard" class="<?= (!isset($view) || $view=='overview') ? 'active' : '' ?>">
                 <i class="ri-dashboard-line"></i> <span>Ringkasan</span>
             </a>
             
-            <?php if($_SESSION['role'] === 'admin'): ?>
+            <?php if(isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
             <div class="menu-label">ADMINISTRATOR</div>
-            <a href="/dashboard/users" class="<?= $view=='users'?'active':'' ?>">
+            
+            <a href="/dashboard/users" class="<?= (isset($view) && $view=='users') ? 'active' : '' ?>">
                 <i class="ri-group-line"></i> <span>Kelola User</span>
             </a>
-            <a href="/dashboard/backup" class="<?= $view=='backup'?'active':'' ?>">
+
+            <a href="/dashboard/vouchers" class="<?= (isset($view) && $view=='vouchers') ? 'active' : '' ?>">
+                <i class="ri-coupon-3-line"></i> <span>Kelola Voucher</span>
+            </a>
+
+            <a href="/dashboard/reports" class="<?= (isset($view) && $view=='reports') ? 'active' : '' ?>">
+                <i class="ri-alarm-warning-line"></i> <span>Laporan Video</span>
+                <?php 
+                // Badge notifikasi jumlah laporan pending
+                // Menggunakan try-catch agar tidak error jika tabel 'reports' belum ada
+                try {
+                    if(isset($db)) {
+                        $pCount = $db->query("SELECT COUNT(*) FROM reports WHERE status='pending'")->fetchColumn();
+                        if($pCount > 0) echo "<span style='background:#ff4757; color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px; margin-left:auto;'>$pCount</span>";
+                    }
+                } catch (Exception $e) {}
+                ?>
+            </a>
+
+            <a href="/dashboard/backup" class="<?= (isset($view) && $view=='backup') ? 'active' : '' ?>">
                 <i class="ri-database-2-line"></i> <span>Backup & Restore</span>
             </a>
             
-            <a href="/dashboard/plans" class="<?= $view=='plans'?'active':'' ?>">
+            <a href="/dashboard/plans" class="<?= (isset($view) && $view=='plans') ? 'active' : '' ?>">
                 <i class="ri-price-tag-3-line"></i> <span>Kelola Paket</span>
             </a>
             <?php endif; ?>
 
             <div class="menu-label">AKUN SAYA</div>
-            <a href="/dashboard/history" class="<?= $view=='history'?'active':'' ?>">
+            
+            <a href="/dashboard/history" class="<?= (isset($view) && $view=='history') ? 'active' : '' ?>">
                 <i class="ri-history-line"></i> <span>Riwayat Tontonan</span>
             </a>
-            <a href="/dashboard/favorites" class="<?= $view=='favorites'?'active':'' ?>">
+            
+            <a href="/dashboard/favorites" class="<?= (isset($view) && $view=='favorites') ? 'active' : '' ?>">
                 <i class="ri-heart-line"></i> <span>Daftar Saya</span>
             </a>
-            <a href="/dashboard/billing" class="<?= $view=='billing'?'active':'' ?>">
+            
+            <a href="/dashboard/billing" class="<?= (isset($view) && $view=='billing') ? 'active' : '' ?>">
                 <i class="ri-vip-crown-line"></i> <span>Langganan</span>
             </a>
-            <a href="/dashboard/settings" class="<?= $view=='settings'?'active':'' ?>">
+
+            <a href="/dashboard/redeem" class="<?= (isset($view) && $view=='redeem') ? 'active' : '' ?>">
+                <i class="ri-ticket-2-line"></i> <span>Tukar Voucher</span>
+            </a>
+
+            <a href="/dashboard/settings" class="<?= (isset($view) && $view=='settings') ? 'active' : '' ?>">
                 <i class="ri-settings-3-line"></i> <span>Pengaturan</span>
             </a>
         </nav>
@@ -71,17 +98,34 @@
                 </a>
                 <div class="user-profile">
                     <div style="text-align:right; font-size:0.9rem;">
-                        <div style="font-weight:bold;"><?= htmlspecialchars($_SESSION['username']) ?></div>
-                        <div style="font-size:0.75rem; color:var(--text-muted);"><?= strtoupper($_SESSION['role']) ?></div>
+                        <div style="font-weight:bold;"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);"><?= strtoupper($_SESSION['role'] ?? 'GUEST') ?></div>
                     </div>
-                    <div class="avatar"><?= strtoupper(substr($_SESSION['username'], 0, 1)) ?></div>
+                    <div class="avatar"><?= strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1)) ?></div>
                     <a href="/logout" title="Logout" style="color:#ff4757; margin-left:10px;"><i class="ri-logout-circle-r-line"></i></a>
                 </div>
             </div>
         </header>
 
         <main class="content">
-            <?php include __DIR__ . '/' . $view . '.php'; ?>
+            <?php 
+            // Validasi variabel $view dari index.php
+            $currentView = $view ?? 'overview';
+            
+            // Cek ketersediaan file view
+            $file = __DIR__ . '/' . $currentView . '.php';
+            
+            if (file_exists($file)) {
+                include $file;
+            } else {
+                echo "
+                <div class='card' style='text-align:center; padding:40px;'>
+                    <i class='ri-file-search-line' style='font-size:3rem; color:#666; margin-bottom:20px; display:block;'></i>
+                    <h3>Halaman Tidak Ditemukan</h3>
+                    <p style='color:#888;'>File view '<b>$currentView.php</b>' belum ada di folder views/dashboard.</p>
+                </div>";
+            }
+            ?>
         </main>
     </div>
 
@@ -95,12 +139,14 @@
             document.getElementById('sidebar').classList.toggle('active');
         }
 
-        // Auto Initialize DataTables (Untuk semua tabel dengan class 'datatable')
+        // Inisialisasi DataTables jika tabel ada
         $(document).ready(function() {
-            $('.datatable').DataTable({
-                responsive: true,
-                language: { search: "", searchPlaceholder: "Cari data...", lengthMenu: "_MENU_ baris" }
-            });
+            if ($('.datatable').length > 0) {
+                $('.datatable').DataTable({
+                    responsive: true,
+                    language: { search: "", searchPlaceholder: "Cari data...", lengthMenu: "_MENU_ baris" }
+                });
+            }
         });
 
         // TOAST NOTIFICATION (Pengganti Alert)
