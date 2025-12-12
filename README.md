@@ -1,203 +1,156 @@
-# 🎬 AGC DramaBox — Web Streaming Platform + Admin Dashboard + PWA
+# 🎬 DramaFlix - Web Streaming Platform & PWA
 
-![PHP](https://img.shields.io/badge/PHP-8.0%2B-777BB4?style=for-the-badge&logo=php)
-![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql)
-![PWA](https://img.shields.io/badge/PWA-Enabled-5A0FC8?style=for-the-badge&logo=pwa)
-![Status](https://img.shields.io/badge/Build-Active-success?style=for-the-badge)
+![PHP](https://img.shields.io/badge/PHP-8.0%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)
 
-**AGC DramaBox** adalah platform streaming video berbasis PHP Native lengkap dengan Admin Dashboard, API modular, dan dukungan Progressive Web App (PWA).
-
----
-
-## ✨ Fitur Utama
-
-### 🔹 Fitur Pengguna (Frontend)
-- UI dark mode modern & responsif  
-- PWA (Add to Home Screen, offline cache)  
-- Halaman beranda, detail konten, dan fitur pencarian  
-- Loading cepat dengan caching Service Worker  
-- Kompatibel mobile & desktop  
+**DramaFlix** adalah aplikasi web streaming modern yang dibangun menggunakan PHP Native dengan arsitektur MVC sederhana. Aplikasi ini dirancang untuk kecepatan, keamanan, dan pengalaman pengguna yang optimal, serta telah mendukung teknologi **PWA (Progressive Web App)** sehingga dapat diinstal di perangkat mobile layaknya aplikasi native.
 
 ---
 
-### 🔹 Fitur Admin (Backend)
-- Login & autentikasi (`app/Auth.php`)  
-- CRUD konten video melalui dashboard  
-- API internal modular (`app/ApiHandler.php`)  
-- Manajemen database fleksibel (`app/Database.php`)  
-- Konfigurasi global yang mudah (`app/Config.php`)  
+## ✨ Fitur Unggulan
+
+### 📱 Sisi Pengguna (Frontend)
+* **Progressive Web App (PWA):** Dapat diinstal di Android & iOS (Add to Home Screen) dan berjalan offline (cache dasar).
+* **Modern Dark UI:** Antarmuka gelap premium ala Netflix yang responsif di semua perangkat.
+* **Smart Player:**
+    * Support streaming HLS (`.m3u8`).
+    * **Auto Next Episode** & Cinema Mode.
+    * **Resume Playback:** Menyimpan posisi episode terakhir yang ditonton.
+* **Fitur Personalisasi:**
+    * Riwayat Tontonan (tersimpan di Database & LocalStorage).
+    * Daftar Favorit ("My List").
+* **Sistem Membership:** Akses konten premium (VIP) vs Gratis dengan halaman penawaran paket yang terintegrasi WhatsApp.
+
+### 🛠️ Sisi Admin (Dashboard)
+* **Dashboard Real-time:** Grafik pendaftaran user, statistik tontonan, dan log aktivitas member.
+* **Manajemen Pengguna:** Tambah, edit, hapus user, dan aktivasi status VIP secara manual.
+* **Manajemen Paket (Plans):** Membuat dan mengedit harga serta durasi paket langganan.
+* **Backup & Restore System:**
+    * Backup database otomatis ke server atau download lokal.
+    * Restore database instan dari file backup yang tersedia.
+* **Maintenance Mode Canggih:** Halaman perbaikan interaktif dengan mini-game "Snake" agar pengunjung tidak bosan.
 
 ---
 
-### 🔹 Fitur Tambahan
-- **SEO Ready** — robots.txt, sitemap generator  
-- Folder cache & backup dilindungi  
-- Struktur folder rapi dan mudah dikembangkan  
-- Dukungan AGC (Auto Grab Content) opsional  
+## 🚀 Teknologi yang Digunakan
+
+* **Backend:** PHP Native (PDO, OOP).
+* **Database:** MySQL / MariaDB.
+* **Frontend:** HTML5, CSS3 (Variables), JavaScript (Vanilla).
+* **Libraries & Plugins:**
+    * `HLS.js` (Video Player)
+    * `Swiper.js` (Hero Slider)
+    * `Chart.js` (Grafik Statistik)
+    * `SweetAlert2` (Notifikasi Modern)
+    * `DataTables` (Tabel Admin Interaktif)
+    * `RemixIcon` (Ikon Vektor)
 
 ---
 
-## 🏗 Struktur Direktori
+## 📂 Struktur Folder
 
-```
-agcdramabox/
-│── app/
-│   ├── ApiHandler.php
-│   ├── Auth.php
-│   ├── Config.php
-│   └── Database.php
-│
-│── assets/
-│   ├── style.css
-│   └── dashboard.css
-│
-│── views/
-│   ├── public/
-│   ├── dashboard/
-│   ├── auth/
-│   ├── header.php
-│   ├── footer.php
-│   ├── home.php
-│   └── 404.php
-│
-│── manifest.json
-│── sw.js
-│── sitemap.php
-│── robots.txt
-│── index.php
-│── backups/
-│── cache/
-```
-
----
-
-## ⚙️ Instalasi & Setup
-
-### 1️⃣ Persyaratan Sistem
-- PHP 8.0+  
-- MySQL / MariaDB  
-- Apache/Nginx dengan mod_rewrite aktif  
-- Ekstensi PHP yang direkomendasikan:
-  - PDO  
-  - cURL  
-
----
-
-### 2️⃣ Konfigurasi Database
-Edit file berikut:
-
-```
-app/Config.php
-```
-
-Sesuaikan:
-- Host  
-- Username  
-- Password  
-- Nama database  
-
----
-
-### 3️⃣ Deploy ke Hosting / Local
-Upload semua file ke:
-
-```
-public_html/  atau  htdocs/
-```
-
-Akses aplikasi:
-
-```
-http://localhost/agcdramabox
-```
-
-Akses Dashboard Admin:
-
-```
-http://domain.com/dashboard
+```text
+/
+├── app/                # Logika Backend (Config, Database, Auth, ApiHandler)
+├── assets/             # File Statis (CSS, JS, Images)
+├── backups/            # Penyimpanan file backup database (.sql) - Terproteksi
+├── views/              # Tampilan Halaman (View)
+│   ├── auth/           # Halaman Login & Register
+│   ├── dashboard/      # Panel Admin & User (Overview, Users, Plans, Backup)
+│   └── public/         # Halaman Depan (Home, Watch, Terms)
+├── .htaccess           # Konfigurasi Security, Routing, & Cache
+├── index.php           # Router Utama & Entry Point
+├── manifest.json       # Konfigurasi PWA
+├── robots.txt          # SEO Crawling
+├── sitemap.php         # Sitemap Generator Dinamis
+└── sw.js               # Service Worker PWA
 ```
 
 ---
 
-## 📡 Dokumentasi API
+## ⚙️ Instalasi & Konfigurasi
 
-### 🔹 GET — Daftar Video
+### 1. **Persiapan Database**
+Buat database baru di MySQL, contoh: `dramaflix_db`.
+
+Buat tabel berikut:
+
+**users**  
+(id, username, password, role, active_until, created_at)
+
+**history**  
+(id, user_id, book_id, title, cover, episode, total_eps, updated_at)
+
+**plans**  
+(id, name, price, duration, features)
+
+**favorites** (opsional)
+
+---
+
+### 2. **Konfigurasi Koneksi**
+Edit file:
+
 ```
-GET /api/videos
+app/Database.php
 ```
 
-### 🔹 GET — Detail Video
-```
-GET /api/video?id=123
-```
+Isi kredensial database Anda.
 
-### 🔹 POST — Login Admin
-```
-POST /auth/login
-```
+---
 
-Body:
+### 3. **Setup Folder Backup**
 ```
-username=
-password=
-```
-
-### 🔹 Response Format Default
-```json
-{
-  "status": "success",
-  "data": []
-}
+mkdir backups
+chmod 755 backups
 ```
 
 ---
 
-## 📦 PWA Integration
+### 4. **Konfigurasi Web Server**
+Pastikan **mod_rewrite aktif**.
 
-Menggunakan:
-- `manifest.json`
-- `sw.js`
+`.htaccess` sudah mengatur:
 
-Fitur:
-- Add to Home Screen  
-- Offline mode  
-- Cache file statis & view dasar  
-
----
-
-## 🔒 Keamanan
-
-Sudah diterapkan:
-- Validasi login & session  
-- Filter input API  
-- Proteksi folder sensitif (`.htaccess`)  
-- Sanitasi parameter URL  
-
-Disarankan tambahan:
-- Rate limiting API  
-- CSRF Token  
-- ReCAPTCHA pada login admin  
+- HTTPS Enforcement (HSTS)
+- Clean URL tanpa `.php`
+- Gzip Compression
+- Cache Control
 
 ---
 
-## 🔧 Roadmap / Rencana Pengembangan
-- Auto grabber (AGC) lebih cerdas  
-- Pagination & filter lanjutan di dashboard  
-- Statistik viewer analytics  
-- Mode multi-role admin  
-- Integrasi CDN untuk video  
+### 5. **Maintenance Mode (Opsional)**
+
+Edit:
+
+```php
+const MAINTENANCE_MODE = true;
+```
+
+---
+
+## 🛡️ Keamanan
+
+DramaFlix menerapkan perlindungan berikut:
+
+- **SQL Injection Protection** via PDO Prepared Statement  
+- **XSS Filtering & Output Escaping**  
+- **Brute Force Prevention** pada login  
+- **Secure Headers** (CSP, HSTS, X-Frame-Options)  
+- **Secure Session Handling**
 
 ---
 
 ## 🤝 Kontribusi
-Pull Request sangat diterima!  
+
+Kontribusi sangat diterima!  
+Silakan fork, buat fitur baru, atau kirim Pull Request.
 
 ---
 
 ## 📝 Lisensi
-Bebas digunakan & dimodifikasi untuk pengembangan dan edukasi.
 
----
+Dibuat untuk edukasi dan pengembangan. Bebas digunakan & dimodifikasi.
 
-## 📷 Screenshot (Opsional)
-Tambahkan screenshot ke folder `assets/` lalu reference di README bila diperlukan.
