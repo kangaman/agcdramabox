@@ -82,6 +82,9 @@
             <a href="/dashboard/settings" class="<?= (isset($view) && $view=='settings') ? 'active' : '' ?>">
                 <i class="ri-settings-3-line"></i> <span>Pengaturan</span>
             </a>
+            <a href="/logout" class="menu-logout" onclick="return confirm('Yakin ingin keluar?');">
+                <i class="ri-logout-box-line"></i> <span>Keluar Aplikasi</span>
+            </a>
         </nav>
     </aside>
 
