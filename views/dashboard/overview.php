@@ -3,20 +3,46 @@ $db = (new Database())->getConnection();
 
 // --- LOGIKA KHUSUS ADMIN ---
 if ($_SESSION['role'] === 'admin') {
-    // 1. STATISTIK UTAMA
+    // 1. STATISTIK UTAMA (TOTAL)
     $totalUsers = $db->query("SELECT COUNT(*) FROM users")->fetchColumn();
     $totalVip = $db->query("SELECT COUNT(*) FROM users WHERE role='vip'")->fetchColumn();
     $activeVip = $db->query("SELECT COUNT(*) FROM users WHERE role='vip' AND active_until > NOW()")->fetchColumn();
     $totalHistory = $db->query("SELECT COUNT(*) FROM history")->fetchColumn();
+    
+    // Hitung Estimasi Omset (Misal rata-rata 1 VIP = Rp 30.000)
+    // Anda bisa menyesuaikan angka 30000 ini sesuai harga paket rata-rata Anda
+    $estRevenue = $totalVip * 30000; 
 
-    // 2. CHART PERTUMBUHAN USER (7 HARI TERAKHIR)
-    $chartData = [];
+    // 2. DATA CHART 30 HARI TERAKHIR (Optimized Query)
+    // Ambil data registrasi harian
+    $regQuery = $db->query("
+        SELECT DATE(created_at) as tgl, COUNT(*) as total 
+        FROM users 
+        WHERE created_at >= DATE(NOW()) - INTERVAL 30 DAY 
+        GROUP BY DATE(created_at)
+    ")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Ambil data views harian (berdasarkan update history)
+    $viewQuery = $db->query("
+        SELECT DATE(updated_at) as tgl, COUNT(*) as total 
+        FROM history 
+        WHERE updated_at >= DATE(NOW()) - INTERVAL 30 DAY 
+        GROUP BY DATE(updated_at)
+    ")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Format Data untuk Chart.js (Looping 30 hari ke belakang)
     $chartLabels = [];
-    for ($i = 6; $i >= 0; $i--) {
+    $regData = [];
+    $viewData = [];
+
+    for ($i = 29; $i >= 0; $i--) {
         $date = date('Y-m-d', strtotime("-$i days"));
-        $count = $db->query("SELECT COUNT(*) FROM users WHERE DATE(created_at) = '$date'")->fetchColumn();
-        $chartLabels[] = date('d M', strtotime($date));
-        $chartData[] = $count;
+        $shortDate = date('d M', strtotime($date));
+        
+        $chartLabels[] = $shortDate;
+        // Jika tidak ada data di tanggal tersebut, isi dengan 0
+        $regData[] = $regQuery[$date] ?? 0;
+        $viewData[] = $viewQuery[$date] ?? 0;
     }
 
     // 3. TOP 5 DRAMA TERPOPULER
@@ -28,7 +54,7 @@ if ($_SESSION['role'] === 'admin') {
         LIMIT 5
     ")->fetchAll(PDO::FETCH_ASSOC);
 
-    // 4. AKTIVITAS TERBARU (OPTIMALISASI QUERY: AMBIL ROLE JUGA)
+    // 4. AKTIVITAS TERBARU
     $recentActivity = $db->query("
         SELECT h.*, u.username, u.role 
         FROM history h 
@@ -36,6 +62,7 @@ if ($_SESSION['role'] === 'admin') {
         ORDER BY h.updated_at DESC 
         LIMIT 5
     ")->fetchAll(PDO::FETCH_ASSOC);
+
 } 
 
 // --- LOGIKA USER BIASA ---
@@ -57,7 +84,7 @@ else {
 <div class="header-flex">
     <div>
         <h2 class="page-title">📊 Dashboard <?= ucfirst($_SESSION['role']) ?></h2>
-        <p style="color:var(--text-muted)">Ringkasan performa website hari ini.</p>
+        <p style="color:var(--text-muted)">Analitik performa website.</p>
     </div>
     
     <?php if($_SESSION['role'] !== 'admin'): ?>
@@ -69,23 +96,23 @@ else {
 
 <?php if($_SESSION['role'] === 'admin'): ?>
 
-    <div class="plans-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 25px;">
+    <div class="plans-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 25px;">
         <div class="card" style="display:flex; align-items:center; gap:15px; padding:20px;">
             <div style="background:rgba(59, 130, 246, 0.1); width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:12px; color:#3b82f6;">
                 <i class="ri-group-fill" style="font-size:1.5rem;"></i>
             </div>
             <div>
-                <h3 style="font-size:1.5rem; margin:0; line-height:1;"><?= $totalUsers ?></h3>
-                <small style="color:var(--text-muted); font-size:0.8rem;">Total Pengguna</small>
+                <h3 style="font-size:1.5rem; margin:0; line-height:1;"><?= number_format($totalUsers) ?></h3>
+                <small style="color:var(--text-muted); font-size:0.8rem;">Total User</small>
             </div>
         </div>
 
         <div class="card" style="display:flex; align-items:center; gap:15px; padding:20px;">
-            <div style="background:rgba(255,215,0,0.1); width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:12px; color:#ffd700;">
+            <div style="background:rgba(255, 215, 0, 0.1); width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:12px; color:#ffd700;">
                 <i class="ri-vip-crown-fill" style="font-size:1.5rem;"></i>
             </div>
             <div>
-                <h3 style="font-size:1.5rem; margin:0; line-height:1;"><?= $activeVip ?></h3>
+                <h3 style="font-size:1.5rem; margin:0; line-height:1;"><?= number_format($activeVip) ?></h3>
                 <small style="color:var(--text-muted); font-size:0.8rem;">VIP Aktif</small>
             </div>
         </div>
@@ -95,8 +122,8 @@ else {
                 <i class="ri-play-circle-fill" style="font-size:1.5rem;"></i>
             </div>
             <div>
-                <h3 style="font-size:1.5rem; margin:0; line-height:1;"><?= $totalHistory ?></h3>
-                <small style="color:var(--text-muted); font-size:0.8rem;">Total Ditonton</small>
+                <h3 style="font-size:1.5rem; margin:0; line-height:1;"><?= number_format($totalHistory) ?></h3>
+                <small style="color:var(--text-muted); font-size:0.8rem;">Total Views</small>
             </div>
         </div>
         
@@ -105,8 +132,8 @@ else {
                 <i class="ri-money-dollar-circle-line" style="font-size:1.5rem;"></i>
             </div>
             <div>
-                <h3 style="font-size:1.5rem; margin:0; line-height:1;">Rp <?= number_format($totalVip * 30000/1000) ?>k</h3>
-                <small style="color:var(--text-muted); font-size:0.8rem;">Estimasi Omset</small>
+                <h3 style="font-size:1.5rem; margin:0; line-height:1;">Rp <?= number_format($estRevenue/1000) ?>k</h3>
+                <small style="color:var(--text-muted); font-size:0.8rem;">Est. Omset</small>
             </div>
         </div>
     </div>
@@ -114,14 +141,14 @@ else {
     <div class="grid-2">
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="font-size:1.1rem; margin:0;"><i class="ri-line-chart-line"></i> Pertumbuhan User</h3>
-                <small style="color:var(--text-muted)">7 Hari Terakhir</small>
+                <h3 style="font-size:1.1rem; margin:0;"><i class="ri-line-chart-line"></i> Statistik Trafik</h3>
+                <small class="badge" style="background:#333; color:#aaa; font-size:0.75rem; padding:4px 8px;">30 Hari Terakhir</small>
             </div>
-            <canvas id="userChart" height="150"></canvas>
+            <canvas id="mainChart" height="200"></canvas>
         </div>
 
         <div class="card">
-            <h3 style="margin-bottom:20px; font-size:1.1rem;"><i class="ri-fire-fill" style="color:#e50914"></i> Paling Populer</h3>
+            <h3 style="margin-bottom:20px; font-size:1.1rem;"><i class="ri-fire-fill" style="color:#e50914"></i> Drama Terpopuler</h3>
             <div style="display:flex; flex-direction:column; gap:15px;">
                 <?php foreach($topDramas as $idx => $drama): ?>
                 <div style="display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -131,7 +158,7 @@ else {
                         <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; font-size:0.9rem; color:white;">
                             <?= htmlspecialchars($drama['title']) ?>
                         </div>
-                        <small style="color:var(--text-muted); font-size:0.8rem;"><?= number_format($drama['viewers']) ?> x Ditonton</small>
+                        <small style="color:var(--text-muted); font-size:0.8rem;"><?= number_format($drama['viewers']) ?> Views</small>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -199,33 +226,60 @@ else {
     </div>
 
     <script>
-        // Chart Config
-        const ctx = document.getElementById('userChart').getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(229, 9, 20, 0.5)');
-        gradient.addColorStop(1, 'rgba(229, 9, 20, 0.0)');
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        
+        // Gradient User (Merah)
+        const gradUser = ctx.createLinearGradient(0, 0, 0, 400);
+        gradUser.addColorStop(0, 'rgba(229, 9, 20, 0.5)');
+        gradUser.addColorStop(1, 'rgba(229, 9, 20, 0.0)');
+
+        // Gradient Views (Biru)
+        const gradView = ctx.createLinearGradient(0, 0, 0, 400);
+        gradView.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+        gradView.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
 
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: <?= json_encode($chartLabels) ?>,
-                datasets: [{
-                    label: 'User Baru',
-                    data: <?= json_encode($chartData) ?>,
-                    borderColor: '#e50914',
-                    backgroundColor: gradient,
-                    borderWidth: 2,
-                    pointBackgroundColor: '#e50914',
-                    tension: 0.4,
-                    fill: true
-                }]
+                datasets: [
+                    {
+                        label: 'User Baru',
+                        data: <?= json_encode($regData) ?>,
+                        borderColor: '#e50914',
+                        backgroundColor: gradUser,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Video Views',
+                        data: <?= json_encode($viewData) ?>,
+                        borderColor: '#3b82f6',
+                        backgroundColor: gradView,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } },
+                interaction: { mode: 'index', intersect: false },
+                plugins: { 
+                    legend: { labels: { color: '#ccc' } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#888' } },
-                    x: { grid: { display: false }, ticks: { color: '#888' } }
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: '#333' }, 
+                        ticks: { color: '#888' } 
+                    },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { color: '#888', maxTicksLimit: 10 } 
+                    }
                 }
             }
         });
