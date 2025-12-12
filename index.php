@@ -14,8 +14,22 @@ header("Referrer-Policy: strict-origin-when-cross-origin");
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 
-// 4. LOAD CONFIG (Untuk Cek Maintenance)
+// 4. LOAD CORE FILES
 require_once 'app/Config.php';
+require_once 'app/Database.php'; // Load DB lebih awal
+
+// --- [BARU] AMBIL PENGATURAN DARI DATABASE ---
+$db = (new Database())->getConnection();
+try {
+    $webConfig = $db->query("SELECT * FROM settings WHERE id = 1")->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Fallback jika tabel belum dibuat
+    $webConfig = [
+        'site_name' => Config::SITE_NAME, 
+        'site_desc' => Config::SITE_DESC, 
+        'maintenance_mode' => 0
+    ];
+}
 
 // --- FITUR MAINTENANCE MODE ---
 // Pastikan 'const MAINTENANCE_MODE = true;' ada di app/Config.php
