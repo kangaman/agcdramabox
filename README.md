@@ -118,23 +118,6 @@ Aplikasi langsung berjalan — **tanpa build step, tanpa dependency tambahan**.
 - PWA lebih stabil dengan perbaikan caching  
 - Performa aplikasi meningkat signifikan  
 - Struktur folder dibuat lebih bersih & scalable  
-
-## 🧹 Fitur dari Versi 1 yang Dihapus
-- Sistem VIP & membership  
-- Player HLS.js auto next episode  
-- Statistik Chart.js  
-- DataTables pada admin  
-- Fitur riwayat tontonan & favorit  
-- Backup database otomatis  
-- Maintenance mode mini-game  
-
-## 🎯 Alasan Penghapusan
-Untuk menjadikan aplikasi:  
-- lebih cepat  
-- lebih stabil  
-- lebih scalable  
-- lebih fokus pada core functionality  
-
 ---
 
 # 📝 **Lisensi**
