@@ -1,55 +1,80 @@
+##############################################
+# BALANCED SECURITY .HTACCESS (OPTIMIZED)
+# Safe for Streaming & Dashboard
+##############################################
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # 1. PAKSA HTTPS (Keamanan)
-    RewriteCond %{HTTPS} off
+
+    # ===============================
+    # 1. FORCE HTTPS (Wajib Gembok Hijau)
+    # ===============================
+    RewriteCond %{HTTPS} !=on
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-    # 2. HILANGKAN EKSTENSI .PHP
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME}\.php -f
-    RewriteRule ^(.*)$ $1.php [L]
-
-    # 3. ROUTING URL CANTIK (Search, Nonton, Halaman Statis)
+    # ===============================
+    # 2. ROUTING URL (Agar Link Tidak Error 404)
+    # ===============================
+    # Halaman Utama
     RewriteRule ^cari/(.*)$ index.php?page=search&q=$1 [L,QSA]
+    
+    # Halaman Nonton (Fix Link Watch)
     RewriteRule ^nonton/(.*)$ index.php?page=watch&id=$1 [L,QSA]
+    RewriteRule ^watch$ index.php?page=watch [L,QSA] 
+
+    # Halaman Statis & Auth
     RewriteRule ^terms$ index.php?page=terms [L,QSA]
     RewriteRule ^privacy$ index.php?page=privacy [L,QSA]
     RewriteRule ^login$ index.php?page=login [L,QSA]
     RewriteRule ^register$ index.php?page=register [L,QSA]
     RewriteRule ^logout$ index.php?page=logout [L,QSA]
-    
+
     # Dashboard Routing
     RewriteRule ^dashboard$ index.php?page=dashboard/overview [L,QSA]
     RewriteRule ^dashboard/(.*)$ index.php?page=dashboard/$1 [L,QSA]
 
-    # 4. BLOKIR AKSES KE FILE SENSITIF
-    <FilesMatch "^\.">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
-    <FilesMatch "(config\.php|database\.php|composer\.json|README\.md)">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
+    # ===============================
+    # 3. PROTECTION (Blokir Akses Folder Sistem)
+    # ===============================
+    RewriteRule ^app/(.*)$ - [F,L]
+    RewriteRule ^views/(.*)$ - [F,L]
+    
+    # Blokir akses langsung ke file PHP sensitif
+    RewriteCond %{REQUEST_FILENAME} !index.php
+    RewriteRule \.php$ - [F,L]
+
 </IfModule>
 
-# 5. KOMPRESI GZIP (Agar Website Ringan)
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
-</IfModule>
-
-# 6. BROWSER CACHING (Agar Loading Kedua Kali Instan)
+# ===============================
+# 4. CACHING CONTROL (FIX TAMPILAN HANCUR)
+# ===============================
 <IfModule mod_expires.c>
     ExpiresActive On
+    
+    # Gambar boleh disimpan lama (biar cepat)
     ExpiresByType image/jpg "access plus 1 year"
     ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
     ExpiresByType image/png "access plus 1 year"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/pdf "access plus 1 month"
-    ExpiresByType text/javascript "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType image/x-icon "access plus 1 year"
-    ExpiresDefault "access plus 2 days"
+    
+    # [PENTING] CSS & JS JANGAN DISIMPAN DULU (0 detik)
+    # Ini memaksa browser untuk selalu mengambil versi terbaru
+    # Mengatasi masalah "Tampilan beda di browser lain"
+    ExpiresByType text/css "access plus 0 seconds"
+    ExpiresByType text/javascript "access plus 0 seconds"
+    ExpiresByType application/javascript "access plus 0 seconds"
+</IfModule>
+
+# ===============================
+# 5. SECURITY HEADERS & COMPRESSION
+# ===============================
+<IfModule mod_headers.c>
+    # Izin akses font & script (Fix Icon Dashboard Hilang)
+    Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; media-src 'self' https: blob: data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.datatables.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; object-src 'none'; frame-ancestors 'self'; base-uri 'self';"
+    
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript
 </IfModule>
