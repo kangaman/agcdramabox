@@ -1,531 +1,551 @@
-<?php 
+<?PHP 
 // 1. DATA PREPARATION
-$raw = $data['data'] ?? $data ?? [];
-$source = $_GET['source'] ?? 'dramabox'; 
+$RAW = $DATA['DATA'] ?? $DATA ?? [];
+$SOURCE = $_GET['SOURCE'] ?? 'DRAMABOX'; 
 
-if (isset($raw['dramaInfo'])) {
-    $info = $raw['dramaInfo'];
-    $chapters = $raw['chapters'] ?? [];
-} else {
-    $info = $raw; 
-    $chapters = $raw['chapters'] ?? $raw['chapter_list'] ?? []; 
+IF (ISSET($RAW['DRAMAINFO'])) {
+    $INFO = $RAW['DRAMAINFO'];
+    $CHAPTERS = $RAW['CHAPTERS'] ?? [];
+} ELSE {
+    $INFO = $RAW; 
+    $CHAPTERS = $RAW['CHAPTERS'] ?? $RAW['CHAPTER_LIST'] ?? []; 
 }
 
-$urlTitle = isset($_GET['title']) ? urldecode($_GET['title']) : '';
-$urlCover = isset($_GET['cover']) ? urldecode($_GET['cover']) : '';
-$title = !empty($urlTitle) ? $urlTitle : ($info['bookName'] ?? $info['title'] ?? 'Nonton Drama');
-$rawCover = !empty($urlCover) ? $urlCover : ($info['cover'] ?? $info['thumbnail'] ?? '');
+$URLTITLE = ISSET($_GET['TITLE']) ? URLDECODE($_GET['TITLE']) : '';
+$URLCOVER = ISSET($_GET['COVER']) ? URLDECODE($_GET['COVER']) : '';
+$TITLE = !EMPTY($URLTITLE) ? $URLTITLE : ($INFO['BOOKNAME'] ?? $INFO['TITLE'] ?? 'NONTON DRAMA');
+$RAWCOVER = !EMPTY($URLCOVER) ? $URLCOVER : ($INFO['COVER'] ?? $INFO['THUMBNAIL'] ?? '');
 
-if (strpos($rawCover, '.heic') !== false) {
-    $cleanUrl = str_replace(['http://', 'https://'], '', $rawCover);
-    $cover = 'https://wsrv.nl/?url=' . urlencode($cleanUrl) . '&output=jpg&q=80';
-} else {
-    $cover = str_replace('http://', 'https://', $rawCover);
+IF (STRPOS($RAWCOVER, '.HEIC') !== FALSE) {
+    $CLEANURL = STR_REPLACE(['HTTP://', 'HTTPS://'], '', $RAWCOVER);
+    $COVER = 'HTTPS://WSRV.NL/?URL=' . URLENCODE($CLEANURL) . '&OUTPUT=JPG&Q=80';
+} ELSE {
+    $COVER = STR_REPLACE('HTTP://', 'HTTPS://', $RAWCOVER);
 }
 
-$intro = $info['introduction'] ?? $info['abstract'] ?? 'Deskripsi tidak tersedia.';
-$rating = $info['score'] ?? '5.0';
-$views = number_format($info['followCount'] ?? $info['read_count'] ?? 0);
-$tags = $info['tags'] ?? $info['stat_infos'] ?? [];
+$INTRO = $INFO['INTRODUCTION'] ?? $INFO['ABSTRACT'] ?? 'DESKRIPSI TIDAK TERSEDIA.';
+$RATING = $INFO['SCORE'] ?? '5.0';
+$VIEWS = NUMBER_FORMAT($INFO['FOLLOWCOUNT'] ?? $INFO['READ_COUNT'] ?? 0);
+$TAGS = $INFO['TAGS'] ?? $INFO['STAT_INFOS'] ?? [];
 
 // 2. AUTHENTICATION & LIMITS
-require_once 'app/Auth.php';
-$auth = new Auth();
-$isLoggedIn = isset($_SESSION['user_id']); 
-$isVip = $auth->isVip();
-$urlId = $_GET['id'] ?? '';
+REQUIRE_ONCE 'APP/AUTH.PHP';
+$AUTH = NEW AUTH();
+$ISLOGGEDIN = ISSET($_SESSION['USER_ID']); 
+$ISVIP = $AUTH->ISVIP();
+$URLID = $_GET['ID'] ?? '';
 
-if ($isVip) { $episodeLimit = 99999; $userStatus = 'vip'; } 
-elseif ($isLoggedIn) { $episodeLimit = 20; $userStatus = 'free'; } 
-else { $episodeLimit = 10; $userStatus = 'guest'; }
+IF ($ISVIP) { $EPISODELIMIT = 99999; $USERSTATUS = 'VIP'; } 
+ELSEIF ($ISLOGGEDIN) { $EPISODELIMIT = 20; $USERSTATUS = 'FREE'; } 
+ELSE { $EPISODELIMIT = 10; $USERSTATUS = 'GUEST'; }
 
-// 3. DATABASE SYNC (Safe Mode)
-$lastEpDB = 0; $isBookmarked = false;
-if ($isLoggedIn && $urlId) {
-    try {
-        $db = (new Database())->getConnection();
-        $stmt = $db->prepare("SELECT episode FROM history WHERE user_id = ? AND book_id = ?");
-        $stmt->execute([$_SESSION['user_id'], $urlId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if($row) $lastEpDB = $row['episode'];
+// 3. DATABASE SYNC (SAFE MODE)
+$LASTEPDB = 0; $ISBOOKMARKED = FALSE;
+IF ($ISLOGGEDIN && $URLID) {
+    TRY {
+        $DB = (NEW DATABASE())->GETCONNECTION();
+        $STMT = $DB->PREPARE("SELECT EPISODE FROM HISTORY WHERE USER_ID = ? AND BOOK_ID = ?");
+        $STMT->EXECUTE([$_SESSION['USER_ID'], $URLID]);
+        $ROW = $STMT->FETCH(PDO::FETCH_ASSOC);
+        IF($ROW) $LASTEPDB = $ROW['EPISODE'];
 
-        $stmtFav = $db->prepare("SELECT id FROM favorites WHERE user_id = ? AND book_id = ?");
-        $stmtFav->execute([$_SESSION['user_id'], $urlId]);
-        if($stmtFav->rowCount() > 0) $isBookmarked = true;
-    } catch (Exception $e) {}
+        $STMTFAV = $DB->PREPARE("SELECT ID FROM FAVORITES WHERE USER_ID = ? AND BOOK_ID = ?");
+        $STMTFAV->EXECUTE([$_SESSION['USER_ID'], $URLID]);
+        IF($STMTFAV->ROWCOUNT() > 0) $ISBOOKMARKED = TRUE;
+    } CATCH (EXCEPTION $E) {}
 }
 
-global $webConfig;
+GLOBAL $WEBCONFIG;
 ?>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<SCRIPT SRC="HTTPS://CDN.JSDELIVR.NET/NPM/HLS.JS@LATEST"></SCRIPT>
 
-<div class="theater-bg" style="background-image: url('<?= $cover ?>')"></div>
+<DIV CLASS="THEATER-BG" STYLE="BACKGROUND-IMAGE: URL('<?= $COVER ?>')"></DIV>
 
-<div class="theater-container fade-in" id="theaterContainer">
+<DIV CLASS="THEATER-CONTAINER FADE-IN" ID="THEATERCONTAINER">
     
-    <div class="player-wrapper">
-        <div class="video-frame" id="videoFrame">
-            <div id="loadingSpinner" class="loading-overlay" style="display:none;">
-                <div class="spinner"></div><p style="margin-top:15px; color:#fff;">Memuat Video...</p>
-            </div>
-            <video id="mainPlayer" controls poster="<?= $cover ?>" class="custom-video" playsinline></video>
+    <DIV CLASS="PLAYER-WRAPPER">
+        <DIV CLASS="VIDEO-FRAME" ID="VIDEOFRAME">
+            <DIV ID="LOADINGSPINNER" CLASS="LOADING-OVERLAY" STYLE="DISPLAY:NONE;">
+                <DIV CLASS="SPINNER"></DIV><P STYLE="MARGIN-TOP:15PX; COLOR:#FFF;">MEMUAT VIDEO...</P>
+            </DIV>
+            <VIDEO ID="MAINPLAYER" CONTROLS POSTER="<?= $COVER ?>" CLASS="CUSTOM-VIDEO" PLAYSINLINE></VIDEO>
             
-            <div id="playerOverlay" class="paywall-overlay" style="display: none;">
-                <div class="paywall-content">
-                    <i id="overlayIcon" class="ri-lock-2-fill icon-lock"></i>
-                    <h2 id="overlayTitle">Konten Terkunci</h2>
-                    <p id="overlayDesc">Upgrade VIP untuk melanjutkan.</p>
-                    <div id="overlayButtons" class="paywall-actions">
-                        <a href="/login" id="btnLoginOverlay" class="btn-secondary" style="display:none; margin-right:10px;">Login Gratis</a>
-                        <a href="/dashboard/billing" class="btn-upgrade">Beli VIP</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <DIV ID="PLAYEROVERLAY" CLASS="PAYWALL-OVERLAY" STYLE="DISPLAY: NONE;">
+                <DIV CLASS="PAYWALL-CONTENT">
+                    <I ID="OVERLAYICON" CLASS="RI-LOCK-2-FILL ICON-LOCK"></I>
+                    <H2 ID="OVERLAYTITLE">KONTEN TERKUNCI</H2>
+                    <P ID="OVERLAYDESC">UPGRADE VIP UNTUK MELANJUTKAN.</P>
+                    <DIV ID="OVERLAYBUTTONS" CLASS="PAYWALL-ACTIONS">
+                        <A HREF="/LOGIN" ID="BTNLOGINOVERLAY" CLASS="BTN-SECONDARY" STYLE="DISPLAY:NONE; MARGIN-RIGHT:10PX;">LOGIN GRATIS</A>
+                        <A HREF="/DASHBOARD/BILLING" CLASS="BTN-UPGRADE">BELI VIP</A>
+                    </DIV>
+                </DIV>
+            </DIV>
+        </DIV>
 
-        <?php if(!empty($webConfig['ad_player']) && !$isVip): ?>
-        <div class="ad-player-slot">
-            <small>IKLAN SPONSOR (Hilang jika VIP)</small>
-            <div class="ad-content"><?= $webConfig['ad_player'] ?></div>
-        </div>
-        <?php endif; ?>
+        <?PHP IF(!EMPTY($WEBCONFIG['AD_PLAYER']) && !$ISVIP): ?>
+        <DIV CLASS="AD-PLAYER-SLOT">
+            <SMALL>IKLAN SPONSOR (HILANG JIKA VIP)</SMALL>
+            <DIV CLASS="AD-CONTENT"><?= $WEBCONFIG['AD_PLAYER'] ?></DIV>
+        </DIV>
+        <?PHP ENDIF; ?>
 
-        <div class="player-toolbar">
-            <div class="toolbar-group toolbar-left">
-                <div class="skip-controls">
-                    <button onclick="skipTime(-10)" class="tool-btn btn-control" title="Mundur 10s">
-                        <i class="ri-replay-10-line"></i> <span class="label-text">-10s</span>
-                    </button>
-                    <button onclick="skipTime(10)" class="tool-btn btn-control" title="Maju 10s">
-                        <i class="ri-forward-10-line"></i> <span class="label-text">+10s</span>
-                    </button>
-                </div>
-                <label class="switch-toggle" title="Otomatis putar episode selanjutnya">
-                    <input type="checkbox" id="autoNext" checked>
-                    <span class="slider"></span>
-                    <span class="label-text">Auto Next</span>
-                </label>
-            </div>
+        <DIV CLASS="PLAYER-TOOLBAR">
+            <DIV CLASS="TOOLBAR-GROUP TOOLBAR-LEFT">
+                <DIV CLASS="SKIP-CONTROLS">
+                    <BUTTON ONCLICK="SKIPTIME(-10)" CLASS="TOOL-BTN BTN-CONTROL" TITLE="MUNDUR 10S">
+                        <I CLASS="RI-REPLAY-10-LINE"></I> <SPAN CLASS="LABEL-TEXT">-10S</SPAN>
+                    </BUTTON>
+                    <BUTTON ONCLICK="SKIPTIME(10)" CLASS="TOOL-BTN BTN-CONTROL" TITLE="MAJU 10S">
+                        <I CLASS="RI-FORWARD-10-LINE"></I> <SPAN CLASS="LABEL-TEXT">+10S</SPAN>
+                    </BUTTON>
+                </DIV>
+                <LABEL CLASS="SWITCH-TOGGLE" TITLE="OTOMATIS PUTAR EPISODE SELANJUTNYA">
+                    <INPUT TYPE="CHECKBOX" ID="AUTONEXT" CHECKED>
+                    <SPAN CLASS="SLIDER"></SPAN>
+                    <SPAN CLASS="LABEL-TEXT">AUTO NEXT</SPAN>
+                </LABEL>
+            </DIV>
 
-            <div class="toolbar-group toolbar-right">
-                <select id="speedSelect" onchange="changeSpeed(this)" class="tool-select">
-                    <option value="1.0" selected>1.0x</option>
-                    <option value="1.25">1.25x</option>
-                    <option value="1.5">1.5x</option>
-                    <option value="2.0">2.0x</option>
-                </select>
-                <div class="divider-vertical"></div>
-                <div class="view-modes">
-                    <button onclick="togglePip()" class="tool-btn btn-view" title="PiP">
-                        <i class="ri-picture-in-picture-2-line"></i> <span class="label-text">PiP</span>
-                    </button>
-                    <button onclick="toggleCinema()" class="tool-btn btn-view" id="btnCinema" title="Cinema">
-                        <i class="ri-aspect-ratio-line"></i> <span class="label-text">Cinema</span>
-                    </button>
-                    <button onclick="toggleFullscreen()" class="tool-btn btn-view" title="Full">
-                        <i class="ri-fullscreen-line"></i> <span class="label-text">Full</span>
-                    </button>
-                </div>
-                <div class="divider-vertical"></div>
-                <div class="action-buttons">
-                    <button onclick="toggleBookmark()" class="tool-btn btn-action" id="btnBookmark" title="Simpan">
-                        <i class="ri-bookmark-line"></i> <span class="label-text">Simpan</span>
-                    </button>
-                    <button onclick="reportVideo()" class="tool-btn btn-danger report-btn" title="Lapor">
-                        <i class="ri-alarm-warning-line"></i> <span class="label-text">Lapor</span>
-                    </button>
-                </div>
-            </div>
-        </div>
+            <DIV CLASS="TOOLBAR-GROUP TOOLBAR-RIGHT">
+                <SELECT ID="SPEEDSELECT" ONCHANGE="CHANGESPEED(THIS)" CLASS="TOOL-SELECT">
+                    <OPTION VALUE="1.0" SELECTED>1.0X</OPTION>
+                    <OPTION VALUE="1.25">1.25X</OPTION>
+                    <OPTION VALUE="1.5">1.5X</OPTION>
+                    <OPTION VALUE="2.0">2.0X</OPTION>
+                </SELECT>
+                <DIV CLASS="DIVIDER-VERTICAL"></DIV>
+                <DIV CLASS="VIEW-MODES">
+                    <BUTTON ONCLICK="TOGGLEPIP()" CLASS="TOOL-BTN BTN-VIEW" TITLE="PIP">
+                        <I CLASS="RI-PICTURE-IN-PICTURE-2-LINE"></I> <SPAN CLASS="LABEL-TEXT">PIP</SPAN>
+                    </BUTTON>
+                    <BUTTON ONCLICK="TOGGLECINEMA()" CLASS="TOOL-BTN BTN-VIEW" ID="BTNCINEMA" TITLE="CINEMA">
+                        <I CLASS="RI-ASPECT-RATIO-LINE"></I> <SPAN CLASS="LABEL-TEXT">CINEMA</SPAN>
+                    </BUTTON>
+                    <BUTTON ONCLICK="TOGGLEFULLSCREEN()" CLASS="TOOL-BTN BTN-VIEW" TITLE="FULL">
+                        <I CLASS="RI-FULLSCREEN-LINE"></I> <SPAN CLASS="LABEL-TEXT">FULL</SPAN>
+                    </BUTTON>
+                </DIV>
+                <DIV CLASS="DIVIDER-VERTICAL"></DIV>
+                <DIV CLASS="ACTION-BUTTONS">
+                    <BUTTON ONCLICK="TOGGLEBOOKMARK()" CLASS="TOOL-BTN BTN-ACTION" ID="BTNBOOKMARK" TITLE="SIMPAN">
+                        <I CLASS="RI-BOOKMARK-LINE"></I> <SPAN CLASS="LABEL-TEXT">SIMPAN</SPAN>
+                    </BUTTON>
+                    <BUTTON ONCLICK="REPORTVIDEO()" CLASS="TOOL-BTN BTN-DANGER REPORT-BTN" TITLE="LAPOR">
+                        <I CLASS="RI-ALARM-WARNING-LINE"></I> <SPAN CLASS="LABEL-TEXT">LAPOR</SPAN>
+                    </BUTTON>
+                </DIV>
+            </DIV>
+        </DIV>
 
-        <div class="player-nav-controls">
-            <button id="btnPrev" onclick="navEpisode(-1)" class="nav-btn disabled" disabled><i class="ri-skip-back-fill"></i> Prev</button>
-            <button id="btnNext" onclick="navEpisode(1)" class="nav-btn">Next <i class="ri-skip-forward-fill"></i></button>
-        </div>
+        <DIV CLASS="PLAYER-NAV-CONTROLS">
+            <BUTTON ID="BTNPREV" ONCLICK="NAVEPISODE(-1)" CLASS="NAV-BTN DISABLED" DISABLED><I CLASS="RI-SKIP-BACK-FILL"></I> PREV</BUTTON>
+            <BUTTON ID="BTNNEXT" ONCLICK="NAVEPISODE(1)" CLASS="NAV-BTN">NEXT <I CLASS="RI-SKIP-FORWARD-FILL"></I></BUTTON>
+        </DIV>
 
-        <div class="video-info">
-            <h1 class="drama-title"><?= htmlspecialchars($title) ?></h1>
-            <div class="meta-badges">
-                <span class="badge-server">SERVER: <?= strtoupper($source) ?></span>
-                <span class="badge-rating"><i class="ri-star-fill"></i> <?= $rating ?></span>
-                <span class="badge-info"><i class="ri-eye-line"></i> <?= $views ?></span>
-                <span class="badge-info"><i class="ri-film-line"></i> <?= count($chapters) ?> Eps</span>
-                <?php if($isVip): ?>
-                    <span class="badge-status status-vip"><i class="ri-vip-crown-fill"></i> VIP</span>
-                <?php elseif($isLoggedIn): ?>
-                    <span class="badge-status status-free"><i class="ri-user-smile-line"></i> FREE</span>
-                <?php else: ?>
-                    <span class="badge-status status-guest"><i class="ri-user-line"></i> TAMU</span>
-                <?php endif; ?>
-            </div>
-            <?php if(!empty($tags)): ?>
-            <div class="tags-container">
-                <?php foreach($tags as $t) { if(!is_array($t)) echo "<a href='/?page=search&q=".urlencode(trim($t))."&source=$source' class='tag-pill'>".htmlspecialchars(trim($t))."</a>"; } ?>
-            </div>
-            <?php endif; ?>
-            <div class="synopsis-box">
-                <h3>Sinopsis</h3>
-                <p><?= nl2br(htmlspecialchars($intro)) ?></p>
-            </div>
-        </div>
-    </div>
+        <DIV CLASS="VIDEO-INFO">
+            <H1 CLASS="DRAMA-TITLE"><?= HTMLSPECIALCHARS($TITLE) ?></H1>
+            <DIV CLASS="META-BADGES">
+                <SPAN CLASS="BADGE-SERVER">SERVER: <?= STRTOUPPER($SOURCE) ?></SPAN>
+                <SPAN CLASS="BADGE-RATING"><I CLASS="RI-STAR-FILL"></I> <?= $RATING ?></SPAN>
+                <SPAN CLASS="BADGE-INFO"><I CLASS="RI-EYE-LINE"></I> <?= $VIEWS ?></SPAN>
+                <SPAN CLASS="BADGE-INFO"><I CLASS="RI-FILM-LINE"></I> <?= COUNT($CHAPTERS) ?> EPS</SPAN>
+                <?PHP IF($ISVIP): ?>
+                    <SPAN CLASS="BADGE-STATUS STATUS-VIP"><I CLASS="RI-VIP-CROWN-FILL"></I> VIP</SPAN>
+                <?PHP ELSEIF($ISLOGGEDIN): ?>
+                    <SPAN CLASS="BADGE-STATUS STATUS-FREE"><I CLASS="RI-USER-SMILE-LINE"></I> FREE</SPAN>
+                <?PHP ELSE: ?>
+                    <SPAN CLASS="BADGE-STATUS STATUS-GUEST"><I CLASS="RI-USER-LINE"></I> TAMU</SPAN>
+                <?PHP ENDIF; ?>
+            </DIV>
+            <?PHP IF(!EMPTY($TAGS)): ?>
+            <DIV CLASS="TAGS-CONTAINER">
+                <?PHP FOREACH($TAGS AS $T) { IF(!IS_ARRAY($T)) ECHO "<A HREF='/?PAGE=SEARCH&Q=".URLENCODE(TRIM($T))."&SOURCE=$SOURCE' CLASS='TAG-PILL'>".HTMLSPECIALCHARS(TRIM($T))."</A>"; } ?>
+            </DIV>
+            <?PHP ENDIF; ?>
+            <DIV CLASS="SYNOPSIS-BOX">
+                <H3>SINOPSIS</H3>
+                <P><?= NL2BR(HTMLSPECIALCHARS($INTRO)) ?></P>
+            </DIV>
+        </DIV>
+    </DIV>
 
-    <div class="playlist-wrapper" id="playlistWrapper">
-        <div class="playlist-header">
-            <h3>Daftar Episode</h3>
-            <div class="ph-search"><i class="ri-search-line"></i><input type="text" id="epsSearch" placeholder="Cari..." onkeyup="filterEpisodes()"></div>
-        </div>
-        <div class="playlist-scroll" id="playlistContainer">
-            <?php if(!empty($chapters)): ?>
-                <?php foreach($chapters as $idx => $chap): 
-                    $num = $idx + 1;
-                    $isLocked = ($num > $episodeLimit); 
-                    $vidId = ($source === 'melolo') ? ($chap['vid'] ?? $chap['id'] ?? '') : '';
-                    $videoUrl = ($source !== 'melolo') ? ($chap['mp4'] ?? $chap['url'] ?? '') : '';
-                    $hasLink = !empty($vidId) || !empty($videoUrl);
+    <DIV CLASS="PLAYLIST-WRAPPER" ID="PLAYLISTWRAPPER">
+        <DIV CLASS="PLAYLIST-HEADER">
+            <H3>DAFTAR EPISODE</H3>
+            <DIV CLASS="PH-SEARCH"><I CLASS="RI-SEARCH-LINE"></I><INPUT TYPE="TEXT" ID="EPSSEARCH" PLACEHOLDER="CARI..." ONKEYUP="FILTEREPISODES()"></DIV>
+        </DIV>
+        <DIV CLASS="PLAYLIST-SCROLL" ID="PLAYLISTCONTAINER">
+            <?PHP IF(!EMPTY($CHAPTERS)): ?>
+                <?PHP FOREACH($CHAPTERS AS $IDX => $CHAP): 
+                    $NUM = $IDX + 1;
+                    $ISLOCKED = ($NUM > $EPISODELIMIT); 
+                    $VIDID = ($SOURCE === 'MELOLO') ? ($CHAP['VID'] ?? $CHAP['ID'] ?? '') : '';
+                    $VIDEOURL = ($SOURCE !== 'MELOLO') ? ($CHAP['MP4'] ?? $CHAP['URL'] ?? '') : '';
+                    $HASLINK = !EMPTY($VIDID) || !EMPTY($VIDEOURL);
                 ?>
-                <button onclick="playEpisode('<?= $videoUrl ?>', '<?= $vidId ?>', <?= $isLocked?'true':'false' ?>, <?= $hasLink?'true':'false' ?>, this, <?= $num ?>)" 
-                        class="eps-item" data-num="<?= $num ?>" id="eps-btn-<?= $num ?>">
-                    <div class="eps-left"><span class="eps-num"><?= str_pad($num, 2, '0', STR_PAD_LEFT) ?></span><div class="playing-anim"><span></span><span></span><span></span></div></div>
-                    <div class="eps-details">
-                        <span class="eps-name">Episode <?= $num ?></span>
-                        <span class="badge-status <?= $isLocked ? 'status-lock' : 'status-ok' ?>">
-                            <?= $isLocked ? '<i class="ri-lock-fill"></i> TERKUNCI' : '<i class="ri-play-circle-line"></i> PUTAR' ?>
-                        </span>
-                    </div>
-                    <div class="watched-indicator"><i class="ri-eye-fill"></i></div>
-                </button>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div style="padding:40px 20px; text-align:center; color:#666;">Belum ada episode.</div>
-            <?php endif; ?>
-        </div>
-    </div>
+                <BUTTON ONCLICK="PLAYEPISODE('<?= $VIDEOURL ?>', '<?= $VIDID ?>', <?= $ISLOCKED?'TRUE':'FALSE' ?>, <?= $HASLINK?'TRUE':'FALSE' ?>, THIS, <?= $NUM ?>)" 
+                        CLASS="EPS-ITEM" DATA-NUM="<?= $NUM ?>" ID="EPS-BTN-<?= $NUM ?>">
+                    <DIV CLASS="EPS-LEFT"><SPAN CLASS="EPS-NUM"><?= STR_PAD($NUM, 2, '0', STR_PAD_LEFT) ?></SPAN><DIV CLASS="PLAYING-ANIM"><SPAN></SPAN><SPAN></SPAN><SPAN></SPAN></DIV></DIV>
+                    <DIV CLASS="EPS-DETAILS">
+                        <SPAN CLASS="EPS-NAME">EPISODE <?= $NUM ?></SPAN>
+                        <SPAN CLASS="BADGE-STATUS <?= $ISLOCKED ? 'STATUS-LOCK' : 'STATUS-OK' ?>">
+                            <?= $ISLOCKED ? '<I CLASS="RI-LOCK-FILL"></I> TERKUNCI' : '<I CLASS="RI-PLAY-CIRCLE-LINE"></I> PUTAR' ?>
+                        </SPAN>
+                    </DIV>
+                    <DIV CLASS="WATCHED-INDICATOR"><I CLASS="RI-EYE-FILL"></I></DIV>
+                </BUTTON>
+                <?PHP ENDFOREACH; ?>
+            <?PHP ELSE: ?>
+                <DIV STYLE="PADDING:40PX 20PX; TEXT-ALIGN:CENTER; COLOR:#666;">BELUM ADA EPISODE.</DIV>
+            <?PHP ENDIF; ?>
+        </DIV>
+    </DIV>
 
-    <div class="comments-section">
-        <div class="comments-header">
-            <h3><i class="ri-chat-voice-line"></i> Diskusi Penonton</h3>
-            <span class="comments-count">Tanya jawab, spoiler, & request disini.</span>
-        </div>
+    <DIV CLASS="COMMENTS-SECTION">
+        <DIV CLASS="COMMENTS-HEADER">
+            <H3><I CLASS="RI-CHAT-VOICE-LINE"></I> DISKUSI PENONTON</H3>
+            <SPAN CLASS="COMMENTS-COUNT">TANYA JAWAB, SPOILER, & REQUEST DISINI.</SPAN>
+        </DIV>
 
-        <div class="comment-form">
-            <div class="form-input-wrapper">
-                <textarea id="commentMsg" rows="2" placeholder="Tulis komentar... (Spoiler pakai tag [spoiler])" 
-                          <?= !$isLoggedIn ? 'readonly onclick="askLogin()"' : '' ?>></textarea>
-                <button onclick="<?= $isLoggedIn ? 'postComment()' : 'askLogin()' ?>" class="btn-send">
-                    <i class="ri-send-plane-fill"></i> Kirim
-                </button>
-            </div>
-        </div>
+        <DIV CLASS="COMMENT-FORM">
+            <DIV CLASS="FORM-INPUT-WRAPPER">
+                <TEXTAREA ID="COMMENTMSG" ROWS="2" PLACEHOLDER="TULIS KOMENTAR... (SPOILER PAKAI TAG [SPOILER])" 
+                          <?= !$ISLOGGEDIN ? 'READONLY ONCLICK="ASKLOGIN()"' : '' ?>></TEXTAREA>
+                <BUTTON ONCLICK="<?= $ISLOGGEDIN ? 'POSTCOMMENT()' : 'ASKLOGIN()' ?>" CLASS="BTN-SEND">
+                    <I CLASS="RI-SEND-PLANE-FILL"></I> KIRIM
+                </BUTTON>
+            </DIV>
+        </DIV>
 
-        <div id="commentsList" class="comments-list">
-            <div style="text-align:center; padding:20px; color:#666;">
-                <div class="spinner" style="width:20px; height:20px; margin:0 auto 10px;"></div> Memuat komentar...
-            </div>
-        </div>
-    </div>
+        <DIV ID="COMMENTSLIST" CLASS="COMMENTS-LIST">
+            <DIV STYLE="TEXT-ALIGN:CENTER; PADDING:20PX; COLOR:#666;">
+                <DIV CLASS="SPINNER" STYLE="WIDTH:20PX; HEIGHT:20PX; MARGIN:0 AUTO 10PX;"></DIV> MEMUAT KOMENTAR...
+            </DIV>
+        </DIV>
+    </DIV>
 
-</div>
+</DIV>
 
-<script>
-var dramaId = '<?= $urlId ?>'; 
-var currentSource = '<?= $source ?>';
-var dramaTitle = '<?= addslashes($title) ?>';
-var lastEpServer = <?= intval($lastEpDB) ?>; 
-var dramaCover = '<?= addslashes($cover) ?>';
-var totalEps = <?= count($chapters) ?>;
-var isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
-var userStatus = '<?= $userStatus ?>'; 
-var isFav = <?= $isBookmarked ? 'true' : 'false' ?>;
+<SCRIPT>
+VAR DRAMAID = '<?= $URLID ?>'; 
+VAR CURRENTSOURCE = '<?= $SOURCE ?>';
+VAR DRAMATITLE = '<?= ADDSLASHES($TITLE) ?>';
+VAR LASTEPSERVER = <?= INTVAL($LASTEPDB) ?>; 
+VAR DRAMACOVER = '<?= ADDSLASHES($COVER) ?>';
+VAR TOTALEPS = <?= COUNT($CHAPTERS) ?>;
+VAR ISLOGGEDIN = <?= $ISLOGGEDIN ? 'TRUE' : 'FALSE' ?>;
+VAR USERSTATUS = '<?= $USERSTATUS ?>'; 
+VAR ISFAV = <?= $ISBOOKMARKED ? 'TRUE' : 'FALSE' ?>;
 
-var video = document.getElementById('mainPlayer');
-var hls = null;
-var currentEpNum = 0;
+VAR VIDEO = DOCUMENT.GETELEMENTBYID('MAINPLAYER');
+VAR HLS = NULL;
+VAR CURRENTEPNUM = 0;
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadHistory(); 
-    updateBookmarkBtn(isFav);
-    loadComments(); // Load Komentar
+DOCUMENT.ADDEVENTLISTENER('DOMCONTENTLOADED', FUNCTION() {
+    LOADHISTORY(); 
+    UPDATEBOOKMARKBTN(ISFAV);
+    LOADCOMMENTS(); // LOAD KOMENTAR
     
-    var startEp = 1;
-    if (lastEpServer > 0) startEp = lastEpServer;
-    else {
-        var localLast = getLastWatchedEp();
-        if (localLast > 0) startEp = localLast;
+    VAR STARTEP = 1;
+    IF (LASTEPSERVER > 0) STARTEP = LASTEPSERVER;
+    ELSE {
+        VAR LOCALLAST = GETLASTWATCHEDEP();
+        IF (LOCALLAST > 0) STARTEP = LOCALLAST;
     }
-    var btn = document.getElementById('eps-btn-' + startEp);
-    if(btn) { btn.click(); setTimeout(() => btn.scrollIntoView({behavior: 'smooth', block: 'center'}), 500); }
-    else { var first = document.querySelector('.eps-item'); if(first) first.click(); }
+    VAR BTN = DOCUMENT.GETELEMENTBYID('EPS-BTN-' + STARTEP);
+    IF(BTN) { BTN.CLICK(); SETTIMEOUT(() => BTN.SCROLLINTOVIEW({BEHAVIOR: 'SMOOTH', BLOCK: 'CENTER'}), 500); }
+    ELSE { VAR FIRST = DOCUMENT.QUERYSELECTOR('.EPS-ITEM'); IF(FIRST) FIRST.CLICK(); }
 });
 
 // --- KOMENTAR LOGIC ---
-function loadComments() {
-    fetch('/index.php?page=api_load_comments&id=' + dramaId)
-    .then(res => res.json())
-    .then(data => {
-        let html = '';
-        if(data.length === 0) {
-            html = '<div style="text-align:center; color:#666; padding:20px;">Belum ada komentar. Jadilah yang pertama!</div>';
-        } else {
-            data.forEach(c => {
-                let initial = c.username.charAt(0).toUpperCase();
-                let avatar = c.avatar ? `<img src="${c.avatar}" class="c-avatar-img">` : `<div class="c-avatar-def">${initial}</div>`;
-                let badge = c.role === 'admin' ? '<span class="c-badge admin">ADMIN</span>' : (c.role === 'vip' ? '<span class="c-badge vip">VIP</span>' : '');
+FUNCTION LOADCOMMENTS() {
+    FETCH('/INDEX.PHP?PAGE=API_LOAD_COMMENTS&ID=' + DRAMAID)
+    .THEN(RES => RES.JSON())
+    .THEN(DATA => {
+        LET HTML = '';
+        IF(DATA.LENGTH === 0) {
+            HTML = '<DIV STYLE="TEXT-ALIGN:CENTER; COLOR:#666; PADDING:20PX;">BELUM ADA KOMENTAR. JADILAH YANG PERTAMA!</DIV>';
+        } ELSE {
+            DATA.FOREACH(C => {
+                LET INITIAL = C.USERNAME.CHARAT(0).TOUPPERCASE();
+                LET AVATAR = C.AVATAR ? `<IMG SRC="${C.AVATAR}" CLASS="C-AVATAR-IMG">` : `<DIV CLASS="C-AVATAR-DEF">${INITIAL}</DIV>`;
+                LET BADGE = C.ROLE === 'ADMIN' ? '<SPAN CLASS="C-BADGE ADMIN">ADMIN</SPAN>' : (C.ROLE === 'VIP' ? '<SPAN CLASS="C-BADGE VIP">VIP</SPAN>' : '');
                 
-                html += `
-                <div class="comment-item">
-                    <div class="c-head">
-                        ${avatar}
-                        <div class="c-meta">
-                            <span class="c-name">${c.fullname || c.username} ${badge}</span>
-                            <span class="c-date">${new Date(c.created_at).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                    <div class="c-body">${c.message}</div>
-                </div>`;
+                HTML += `
+                <DIV CLASS="COMMENT-ITEM">
+                    <DIV CLASS="C-HEAD">
+                        ${AVATAR}
+                        <DIV CLASS="C-META">
+                            <SPAN CLASS="C-NAME">${C.FULLNAME || C.USERNAME} ${BADGE}</SPAN>
+                            <SPAN CLASS="C-DATE">${NEW DATE(C.CREATED_AT).TOLOCALEDATESTRING()}</SPAN>
+                        </DIV>
+                    </DIV>
+                    <DIV CLASS="C-BODY">${C.MESSAGE}</DIV>
+                </DIV>`;
             });
         }
-        document.getElementById('commentsList').innerHTML = html;
+        DOCUMENT.GETELEMENTBYID('COMMENTSLIST').INNERHTML = HTML;
     });
 }
 
-function postComment() {
-    let msg = document.getElementById('commentMsg').value;
-    if(!msg.trim()) return alert("Komentar tidak boleh kosong!");
+FUNCTION POSTCOMMENT() {
+    LET MSG = DOCUMENT.GETELEMENTBYID('COMMENTMSG').VALUE;
+    IF(!MSG.TRIM()) RETURN ALERT("KOMENTAR TIDAK BOLEH KOSONG!");
     
-    let btn = document.querySelector('.btn-send');
-    let oldText = btn.innerHTML;
-    btn.innerHTML = '<i class="ri-loader-4-line spin"></i>';
-    btn.disabled = true;
+    LET BTN = DOCUMENT.QUERYSELECTOR('.BTN-SEND');
+    LET OLDTEXT = BTN.INNERHTML;
+    BTN.INNERHTML = '<I CLASS="RI-LOADER-4-LINE SPIN"></I>';
+    BTN.DISABLED = TRUE;
 
-    fetch('/index.php?page=api_post_comment', {
-        method: 'POST', 
-        body: JSON.stringify({id: dramaId, msg: msg})
+    FETCH('/INDEX.PHP?PAGE=API_POST_COMMENT', {
+        METHOD: 'POST', 
+        BODY: JSON.STRINGIFY({ID: DRAMAID, MSG: MSG})
     })
-    .then(res => res.json())
-    .then(d => {
-        if(d.status) {
-            document.getElementById('commentMsg').value = '';
-            loadComments(); 
-        } else {
-            alert(d.msg || 'Gagal mengirim komentar.');
+    .THEN(RES => RES.JSON())
+    .THEN(D => {
+        IF(D.STATUS) {
+            DOCUMENT.GETELEMENTBYID('COMMENTMSG').VALUE = '';
+            LOADCOMMENTS(); 
+        } ELSE {
+            ALERT(D.MSG || 'GAGAL MENGIRIM KOMENTAR.');
         }
-        btn.innerHTML = oldText;
-        btn.disabled = false;
+        BTN.INNERHTML = OLDTEXT;
+        BTN.DISABLED = FALSE;
     });
 }
 
-function askLogin() {
-    if(confirm("Anda harus Login untuk berkomentar. Login sekarang?")) {
-        window.location.href = '/login';
+FUNCTION ASKLOGIN() {
+    IF(CONFIRM("ANDA HARUS LOGIN UNTUK BERKOMENTAR. LOGIN SEKARANG?")) {
+        WINDOW.LOCATION.HREF = '/LOGIN';
     }
 }
 
 // --- PLAYER LOGIC ---
-function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
-    currentEpNum = epsNum;
-    document.getElementById('loadingSpinner').style.display = 'flex';
-    document.getElementById('playerOverlay').style.display = 'none';
-    document.querySelectorAll('.eps-item').forEach(b => b.classList.remove('active'));
+FUNCTION PLAYEPISODE(DIRECTURL, VIDID, ISLOCKED, HASLINK, BTN, EPSNUM) {
+    CURRENTEPNUM = EPSNUM;
+    DOCUMENT.GETELEMENTBYID('LOADINGSPINNER').STYLE.DISPLAY = 'FLEX';
+    DOCUMENT.GETELEMENTBYID('PLAYEROVERLAY').STYLE.DISPLAY = 'NONE';
+    DOCUMENT.QUERYSELECTORALL('.EPS-ITEM').FOREACH(B => B.CLASSLIST.REMOVE('ACTIVE'));
     
-    if(btn) { btn.classList.add('active'); markAsWatched(epsNum); updateNavButtons(btn); }
-    video.style.display = 'block'; video.pause();
-    var resumeTime = localStorage.getItem('resume_' + dramaId + '_' + epsNum);
+    IF(BTN) { BTN.CLASSLIST.ADD('ACTIVE'); MARKASWATCHED(EPSNUM); UPDATENAVBUTTONS(BTN); }
+    VIDEO.STYLE.DISPLAY = 'BLOCK'; VIDEO.PAUSE();
+    VAR RESUMETIME = LOCALSTORAGE.GETITEM('RESUME_' + DRAMAID + '_' + EPSNUM);
 
-    if (isLocked) { 
-        let title = 'Konten Terkunci'; let desc = 'Upgrade VIP untuk melanjutkan.'; let showLoginBtn = false;
-        if (userStatus === 'guest') { title = 'Batas Tamu (10 Eps)'; desc = 'Login untuk nonton gratis s/d Ep 20.'; showLoginBtn = true; } 
-        else if (userStatus === 'free') { title = 'Jatah Gratis Habis'; desc = 'Beli VIP untuk akses penuh.'; }
-        showOverlay('ri-lock-star-fill', '#ffd700', title, desc, true, showLoginBtn); return; 
+    IF (ISLOCKED) { 
+        LET TITLE = 'KONTEN TERKUNCI'; LET DESC = 'UPGRADE VIP UNTUK MELANJUTKAN.'; LET SHOWLOGINBTN = FALSE;
+        IF (USERSTATUS === 'GUEST') { TITLE = 'BATAS TAMU (10 EPS)'; DESC = 'LOGIN UNTUK NONTON GRATIS S/D EP 20.'; SHOWLOGINBTN = TRUE; } 
+        ELSE IF (USERSTATUS === 'FREE') { TITLE = 'JATAH GRATIS HABIS'; DESC = 'BELI VIP UNTUK AKSES PENUH.'; }
+        SHOWOVERLAY('RI-LOCK-STAR-FILL', '#FFD700', TITLE, DESC, TRUE, SHOWLOGINBTN); RETURN; 
     }
-    if (!hasLink) { showOverlay('ri-file-shred-line', '#666', 'Belum Tersedia', 'Episode belum rilis.', false, false); return; }
+    IF (!HASLINK) { SHOWOVERLAY('RI-FILE-SHRED-LINE', '#666', 'BELUM TERSEDIA', 'EPISODE BELUM RILIS.', FALSE, FALSE); RETURN; }
 
-    if (currentSource === 'melolo' && vidId) {
-        fetch(`/index.php?page=api_get_stream&source=melolo&id=${vidId}`)
-            .then(res => res.json())
-            .then(resp => {
-                let streamUrl = resp.main_url || resp.data?.main_url || resp.url || '';
-                if(streamUrl) {
-                    if (streamUrl.startsWith('http://')) streamUrl = streamUrl.replace('http://', 'https://');
-                    loadVideo(streamUrl, resumeTime);
-                } else { showOverlay('ri-error-warning-line', '#ff4757', 'Gagal', 'Video error.', false, false); }
+    IF (CURRENTSOURCE === 'MELOLO' && VIDID) {
+        FETCH(`/INDEX.PHP?PAGE=API_GET_STREAM&SOURCE=MELOLO&ID=${VIDID}`)
+            .THEN(RES => RES.JSON())
+            .THEN(RESP => {
+                LET STREAMURL = RESP.MAIN_URL || RESP.DATA?.MAIN_URL || RESP.URL || '';
+                IF(STREAMURL) {
+                    IF (STREAMURL.STARTSWITH('HTTP://')) STREAMURL = STREAMURL.REPLACE('HTTP://', 'HTTPS://');
+                    LOADVIDEO(STREAMURL, RESUMETIME);
+                } ELSE { SHOWOVERLAY('RI-ERROR-WARNING-LINE', '#FF4757', 'GAGAL', 'VIDEO ERROR.', FALSE, FALSE); }
             })
-            .catch(() => showOverlay('ri-wifi-off-line', '#ff4757', 'Error', 'Gagal koneksi.', false, false));
-    } else { loadVideo(directUrl, resumeTime); }
+            .CATCH(() => SHOWOVERLAY('RI-WIFI-OFF-LINE', '#FF4757', 'ERROR', 'GAGAL KONEKSI.', FALSE, FALSE));
+    } ELSE { LOADVIDEO(DIRECTURL, RESUMETIME); }
 }
 
-function loadVideo(url, startTime) {
-    if(!url) { document.getElementById('loadingSpinner').style.display = 'none'; return; }
-    function onReady() {
-        document.getElementById('loadingSpinner').style.display = 'none';
-        if(startTime) video.currentTime = parseFloat(startTime);
-        video.play().catch(e => console.log("Autoplay blocked"));
+FUNCTION LOADVIDEO(URL, STARTTIME) {
+    IF(!URL) { DOCUMENT.GETELEMENTBYID('LOADINGSPINNER').STYLE.DISPLAY = 'NONE'; RETURN; }
+    FUNCTION ONREADY() {
+        DOCUMENT.GETELEMENTBYID('LOADINGSPINNER').STYLE.DISPLAY = 'NONE';
+        IF(STARTTIME) VIDEO.CURRENTTIME = PARSEFLOAT(STARTTIME);
+        VIDEO.PLAY().CATCH(E => CONSOLE.LOG("AUTOPLAY BLOCKED"));
     }
-    if (Hls.isSupported() && url.includes('.m3u8')) {
-        if(hls) hls.destroy();
-        hls = new Hls(); hls.loadSource(url); hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, onReady);
-    } else {
-        video.src = url; video.addEventListener('loadedmetadata', onReady, {once:true}); video.play().catch(e=>{});
+    IF (HLS.ISSUPPORTED() && URL.INCLUDES('.M3U8')) {
+        IF(HLS) HLS.DESTROY();
+        HLS = NEW HLS(); HLS.LOADSOURCE(URL); HLS.ATTACHMEDIA(VIDEO);
+        HLS.ON(HLS.EVENTS.MANIFEST_PARSED, ONREADY);
+    } ELSE {
+        VIDEO.SRC = URL; VIDEO.ADDEVENTLISTENER('LOADEDMETADATA', ONREADY, {ONCE:TRUE}); VIDEO.PLAY().CATCH(E=>{});
     }
 }
 
-function toggleBookmark() {
-    if (!isLoggedIn) { if(confirm("Login dulu untuk menyimpan drama ini.")) window.location.href = '/login'; return; }
-    isFav = !isFav; updateBookmarkBtn(isFav);
-    fetch('/index.php?page=api_toggle_fav', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: dramaId, title: dramaTitle, cover: dramaCover }) })
-    .then(res => res.json()).then(data => { if(!data.status) { isFav = !isFav; updateBookmarkBtn(isFav); alert("Gagal: " + data.msg); } });
+FUNCTION TOGGLEBOOKMARK() {
+    IF (!ISLOGGEDIN) { IF(CONFIRM("LOGIN DULU UNTUK MENYIMPAN DRAMA INI.")) WINDOW.LOCATION.HREF = '/LOGIN'; RETURN; }
+    ISFAV = !ISFAV; UPDATEBOOKMARKBTN(ISFAV);
+    FETCH('/INDEX.PHP?PAGE=API_TOGGLE_FAV', { METHOD: 'POST', HEADERS: { 'CONTENT-TYPE': 'APPLICATION/JSON' }, BODY: JSON.STRINGIFY({ ID: DRAMAID, TITLE: DRAMATITLE, COVER: DRAMACOVER }) })
+    .THEN(RES => RES.JSON()).THEN(DATA => { IF(!DATA.STATUS) { ISFAV = !ISFAV; UPDATEBOOKMARKBTN(ISFAV); ALERT("GAGAL: " + DATA.MSG); } });
 }
-function updateBookmarkBtn(status) {
-    const btn = document.getElementById('btnBookmark');
-    const icon = btn.querySelector('i'); const label = btn.querySelector('.label-text');
-    if (status) { btn.classList.add('active-bookmark'); icon.className = 'ri-bookmark-fill'; label.innerText = 'Tersimpan'; } 
-    else { btn.classList.remove('active-bookmark'); icon.className = 'ri-bookmark-line'; label.innerText = 'Simpan'; }
+FUNCTION UPDATEBOOKMARKBTN(STATUS) {
+    CONST BTN = DOCUMENT.GETELEMENTBYID('BTNBOOKMARK');
+    CONST ICON = BTN.QUERYSELECTOR('I'); CONST LABEL = BTN.QUERYSELECTOR('.LABEL-TEXT');
+    IF (STATUS) { BTN.CLASSLIST.ADD('ACTIVE-BOOKMARK'); ICON.CLASSNAME = 'RI-BOOKMARK-FILL'; LABEL.INNERTEXT = 'TERSIMPAN'; } 
+    ELSE { BTN.CLASSLIST.REMOVE('ACTIVE-BOOKMARK'); ICON.CLASSNAME = 'RI-BOOKMARK-LINE'; LABEL.INNERTEXT = 'SIMPAN'; }
 }
-function markAsWatched(num) {
-    if(!dramaId) return;
-    var k = 'watched_' + dramaId; var h = JSON.parse(localStorage.getItem(k) || '[]');
-    if(!h.includes(num)) { h.push(num); localStorage.setItem(k, JSON.stringify(h)); }
-    localStorage.setItem('history_item_' + dramaId, JSON.stringify({ id: dramaId, title: dramaTitle, cover: dramaCover, lastEp: num, timestamp: Date.now(), source: currentSource }));
-    var btn = document.getElementById('eps-btn-' + num); if(btn) btn.classList.add('watched');
-    if (isLoggedIn) {
-        fetch('/index.php?page=api_save_history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: dramaId, title: dramaTitle, cover: dramaCover, episode: num, total: totalEps }) });
+FUNCTION MARKASWATCHED(NUM) {
+    IF(!DRAMAID) RETURN;
+    VAR K = 'WATCHED_' + DRAMAID; VAR H = JSON.PARSE(LOCALSTORAGE.GETITEM(K) || '[]');
+    IF(!H.INCLUDES(NUM)) { H.PUSH(NUM); LOCALSTORAGE.SETITEM(K, JSON.STRINGIFY(H)); }
+    LOCALSTORAGE.SETITEM('HISTORY_ITEM_' + DRAMAID, JSON.STRINGIFY({ ID: DRAMAID, TITLE: DRAMATITLE, COVER: DRAMACOVER, LASTEP: NUM, TIMESTAMP: DATE.NOW(), SOURCE: CURRENTSOURCE }));
+    VAR BTN = DOCUMENT.GETELEMENTBYID('EPS-BTN-' + NUM); IF(BTN) BTN.CLASSLIST.ADD('WATCHED');
+    IF (ISLOGGEDIN) {
+        FETCH('/INDEX.PHP?PAGE=API_SAVE_HISTORY', { METHOD: 'POST', HEADERS: { 'CONTENT-TYPE': 'APPLICATION/JSON' }, BODY: JSON.STRINGIFY({ ID: DRAMAID, TITLE: DRAMATITLE, COVER: DRAMACOVER, EPISODE: NUM, TOTAL: TOTALEPS }) });
     }
 }
-function loadHistory() {
-    if(!dramaId) return;
-    var localData = JSON.parse(localStorage.getItem('watched_' + dramaId) || '[]');
-    if (lastEpServer > 0 && !localData.includes(lastEpServer)) { localData.push(lastEpServer); localStorage.setItem('watched_' + dramaId, JSON.stringify(localData)); }
-    localData.forEach(n => { var btn = document.getElementById('eps-btn-' + n); if(btn) btn.classList.add('watched'); });
+FUNCTION LOADHISTORY() {
+    IF(!DRAMAID) RETURN;
+    VAR LOCALDATA = JSON.PARSE(LOCALSTORAGE.GETITEM('WATCHED_' + DRAMAID) || '[]');
+    IF (LASTEPSERVER > 0 && !LOCALDATA.INCLUDES(LASTEPSERVER)) { LOCALDATA.PUSH(LASTEPSERVER); LOCALSTORAGE.SETITEM('WATCHED_' + DRAMAID, JSON.STRINGIFY(LOCALDATA)); }
+    LOCALDATA.FOREACH(N => { VAR BTN = DOCUMENT.GETELEMENTBYID('EPS-BTN-' + N); IF(BTN) BTN.CLASSLIST.ADD('WATCHED'); });
 }
-function getLastWatchedEp() { var h = JSON.parse(localStorage.getItem('history_item_' + dramaId) || '{}'); return h.lastEp || 0; }
-video.addEventListener('timeupdate', function() { if(video.currentTime > 5 && !video.paused && currentEpNum > 0) localStorage.setItem('resume_' + dramaId + '_' + currentEpNum, video.currentTime); });
-video.addEventListener('ended', function() { if(document.getElementById('autoNext').checked) navEpisode(1); });
-function skipTime(s) { video.currentTime += s; }
-function changeSpeed(el) { video.playbackRate = parseFloat(el.value); }
-function toggleCinema() { document.getElementById('theaterContainer').classList.toggle('cinema-mode'); document.getElementById('btnCinema').classList.toggle('active-view'); }
-function toggleFullscreen() { if (!document.fullscreenElement) { video.requestFullscreen(); } else { document.exitFullscreen(); } }
-function togglePip() { if (document.pictureInPictureElement) { document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled) { video.requestPictureInPicture(); } }
-function navEpisode(dir) { var cur = document.querySelector('.eps-item.active'); if(!cur) return; var target = dir===1 ? cur.nextElementSibling : cur.previousElementSibling; if(target) target.click(); }
-function updateNavButtons(btn) { document.getElementById('btnPrev').disabled = !btn.previousElementSibling; document.getElementById('btnNext').disabled = !btn.nextElementSibling; }
-function showOverlay(icon, col, title, desc, showVipBtn, showLoginBtn) { 
-    var ov = document.getElementById('playerOverlay'); video.style.display = 'none'; video.pause(); ov.style.display = 'flex'; 
-    document.getElementById('overlayIcon').className = icon; document.getElementById('overlayIcon').style.color = col; 
-    document.getElementById('overlayTitle').innerText = title; document.getElementById('overlayDesc').innerText = desc; 
-    document.getElementById('overlayButtons').style.display = 'block'; 
-    document.getElementById('btnLoginOverlay').style.display = showLoginBtn ? 'inline-block' : 'none';
-    document.querySelector('.btn-upgrade').style.display = showVipBtn ? 'inline-block' : 'none';
-    document.getElementById('loadingSpinner').style.display = 'none'; 
+FUNCTION GETLASTWATCHEDEP() { VAR H = JSON.PARSE(LOCALSTORAGE.GETITEM('HISTORY_ITEM_' + DRAMAID) || '{}'); RETURN H.LASTEP || 0; }
+VIDEO.ADDEVENTLISTENER('TIMEUPDATE', FUNCTION() { IF(VIDEO.CURRENTTIME > 5 && !VIDEO.PAUSED && CURRENTEPNUM > 0) LOCALSTORAGE.SETITEM('RESUME_' + DRAMAID + '_' + CURRENTEPNUM, VIDEO.CURRENTTIME); });
+VIDEO.ADDEVENTLISTENER('ENDED', FUNCTION() { IF(DOCUMENT.GETELEMENTBYID('AUTONEXT').CHECKED) NAVEPISODE(1); });
+FUNCTION SKIPTIME(S) { VIDEO.CURRENTTIME += S; }
+FUNCTION CHANGESPEED(EL) { VIDEO.PLAYBACKRATE = PARSEFLOAT(EL.VALUE); }
+FUNCTION TOGGLECINEMA() { DOCUMENT.GETELEMENTBYID('THEATERCONTAINER').CLASSLIST.TOGGLE('CINEMA-MODE'); DOCUMENT.GETELEMENTBYID('BTNCINEMA').CLASSLIST.TOGGLE('ACTIVE-VIEW'); }
+FUNCTION TOGGLEFULLSCREEN() { IF (!DOCUMENT.FULLSCREENELEMENT) { VIDEO.REQUESTFULLSCREEN(); } ELSE { DOCUMENT.EXITFULLSCREEN(); } }
+FUNCTION TOGGLEPIP() { IF (DOCUMENT.PICTUREINPICTUREELEMENT) { DOCUMENT.EXITPICTUREINPICTURE(); } ELSE IF (DOCUMENT.PICTUREINPICTUREENABLED) { VIDEO.REQUESTPICTUREINPICTURE(); } }
+FUNCTION NAVEPISODE(DIR) { VAR CUR = DOCUMENT.QUERYSELECTOR('.EPS-ITEM.ACTIVE'); IF(!CUR) RETURN; VAR TARGET = DIR===1 ? CUR.NEXTELEMENTSIBLING : CUR.PREVIOUSELEMENTSIBLING; IF(TARGET) TARGET.CLICK(); }
+FUNCTION UPDATENAVBUTTONS(BTN) { DOCUMENT.GETELEMENTBYID('BTNPREV').DISABLED = !BTN.PREVIOUSELEMENTSIBLING; DOCUMENT.GETELEMENTBYID('BTNNEXT').DISABLED = !BTN.NEXTELEMENTSIBLING; }
+FUNCTION SHOWOVERLAY(ICON, COL, TITLE, DESC, SHOWVIPBTN, SHOWLOGINBTN) { 
+    VAR OV = DOCUMENT.GETELEMENTBYID('PLAYEROVERLAY'); VIDEO.STYLE.DISPLAY = 'NONE'; VIDEO.PAUSE(); OV.STYLE.DISPLAY = 'FLEX'; 
+    DOCUMENT.GETELEMENTBYID('OVERLAYICON').CLASSNAME = ICON; DOCUMENT.GETELEMENTBYID('OVERLAYICON').STYLE.COLOR = COL; 
+    DOCUMENT.GETELEMENTBYID('OVERLAYTITLE').INNERTEXT = TITLE; DOCUMENT.GETELEMENTBYID('OVERLAYDESC').INNERTEXT = DESC; 
+    DOCUMENT.GETELEMENTBYID('OVERLAYBUTTONS').STYLE.DISPLAY = 'BLOCK'; 
+    DOCUMENT.GETELEMENTBYID('BTNLOGINOVERLAY').STYLE.DISPLAY = SHOWLOGINBTN ? 'INLINE-BLOCK' : 'NONE';
+    DOCUMENT.QUERYSELECTOR('.BTN-UPGRADE').STYLE.DISPLAY = SHOWVIPBTN ? 'INLINE-BLOCK' : 'NONE';
+    DOCUMENT.GETELEMENTBYID('LOADINGSPINNER').STYLE.DISPLAY = 'NONE'; 
 }
-function filterEpisodes() { var v = document.getElementById('epsSearch').value.toLowerCase(); document.querySelectorAll('.eps-item').forEach(el => { var t = el.innerText.toLowerCase(); el.style.display = t.includes(v) ? "" : "none"; }); }
-function reportVideo() { if(confirm("Lapor video rusak?")) window.open(`https://t.me/jejakintel?text=${encodeURIComponent('Lapor Error: '+dramaTitle+' Ep '+currentEpNum)}`, '_blank'); }
-</script>
+FUNCTION FILTEREPISODES() { VAR V = DOCUMENT.GETELEMENTBYID('EPSSEARCH').VALUE.TOLOWERCASE(); DOCUMENT.QUERYSELECTORALL('.EPS-ITEM').FOREACH(EL => { VAR T = EL.INNERTEXT.TOLOWERCASE(); EL.STYLE.DISPLAY = T.INCLUDES(V) ? "" : "NONE"; }); }
+FUNCTION REPORTVIDEO() { IF(CONFIRM("LAPOR VIDEO RUSAK?")) WINDOW.OPEN(`HTTPS://T.ME/JEJAKINTEL?TEXT=${ENCODEURICOMPONENT('LAPOR ERROR: '+DRAMATITLE+' EP '+CURRENTEPNUM)}`, '_BLANK'); }
+</SCRIPT>
 
-<style>
+<STYLE>
 /* STYLE KOMENTAR NATIVE */
-.comments-section { grid-column: 1 / -1; margin-top: 40px; background: #151518; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 30px; }
-.comments-header { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
-.comments-header h3 { margin: 0; color: white; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
-.comments-header h3 i { color: var(--primary); }
-.comments-count { color: #888; font-size: 0.9rem; margin-top: 4px; }
+.COMMENTS-SECTION { GRID-COLUMN: 1 / -1; MARGIN-TOP: 40PX; BACKGROUND: #151518; BORDER: 1PX SOLID RGBA(255,255,255,0.05); BORDER-RADIUS: 16PX; PADDING: 30PX; }
+.COMMENTS-HEADER { BORDER-BOTTOM: 1PX SOLID RGBA(255,255,255,0.1); PADDING-BOTTOM: 20PX; MARGIN-BOTTOM: 20PX; DISPLAY: FLEX; ALIGN-ITEMS: CENTER; GAP: 15PX; }
+.COMMENTS-HEADER H3 { MARGIN: 0; COLOR: WHITE; FONT-SIZE: 1.3REM; DISPLAY: FLEX; ALIGN-ITEMS: CENTER; GAP: 10PX; }
+.COMMENTS-HEADER H3 I { COLOR: VAR(--PRIMARY); }
+.COMMENTS-COUNT { COLOR: #888; FONT-SIZE: 0.9REM; MARGIN-TOP: 4PX; }
 
-.comment-form { margin-bottom: 25px; }
-.form-input-wrapper { display: flex; gap: 10px; align-items: flex-start; }
-.form-input-wrapper textarea { flex: 1; background: #0f1014; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; resize: none; font-family: inherit; }
-.form-input-wrapper textarea:focus { border-color: var(--primary); outline: none; }
-.btn-send { background: var(--primary); color: white; border: none; padding: 0 20px; height: 50px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-.btn-send:hover { opacity: 0.9; }
+.COMMENT-FORM { MARGIN-BOTTOM: 25PX; }
+.FORM-INPUT-WRAPPER { DISPLAY: FLEX; GAP: 10PX; ALIGN-ITEMS: FLEX-START; }
+.FORM-INPUT-WRAPPER TEXTAREA { FLEX: 1; BACKGROUND: #0F1014; BORDER: 1PX SOLID RGBA(255,255,255,0.1); COLOR: WHITE; PADDING: 12PX; BORDER-RADIUS: 8PX; RESIZE: NONE; FONT-FAMILY: INHERIT; }
+.FORM-INPUT-WRAPPER TEXTAREA:FOCUS { BORDER-COLOR: VAR(--PRIMARY); OUTLINE: NONE; }
+.BTN-SEND { BACKGROUND: VAR(--PRIMARY); COLOR: WHITE; BORDER: NONE; PADDING: 0 20PX; HEIGHT: 50PX; BORDER-RADIUS: 8PX; CURSOR: POINTER; FONT-WEIGHT: BOLD; DISPLAY: FLEX; ALIGN-ITEMS: CENTER; GAP: 5PX; }
+.BTN-SEND:HOVER { OPACITY: 0.9; }
 
-.comments-list { display: flex; flex-direction: column; gap: 20px; max-height: 500px; overflow-y: auto; padding-right: 5px; }
-.comment-item { background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
-.c-head { display: flex; gap: 12px; margin-bottom: 10px; }
-.c-avatar-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-.c-avatar-def { width: 40px; height: 40px; border-radius: 50%; background: #333; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-.c-meta { display: flex; flex-direction: column; justify-content: center; }
-.c-name { color: #fff; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
-.c-date { color: #666; font-size: 0.75rem; }
-.c-body { color: #ccc; font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; }
-.c-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; }
-.c-badge.admin { background: #7c3aed; color: #fff; }
-.c-badge.vip { background: #ffd700; color: #000; }
-.comments-list::-webkit-scrollbar { width: 5px; }
-.comments-list::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+.COMMENTS-LIST { DISPLAY: FLEX; FLEX-DIRECTION: COLUMN; GAP: 20PX; MAX-HEIGHT: 500PX; OVERFLOW-Y: AUTO; PADDING-RIGHT: 5PX; }
+.COMMENT-ITEM { BACKGROUND: RGBA(255,255,255,0.02); PADDING: 15PX; BORDER-RADIUS: 10PX; BORDER: 1PX SOLID RGBA(255,255,255,0.05); }
+.C-HEAD { DISPLAY: FLEX; GAP: 12PX; MARGIN-BOTTOM: 10PX; }
+.C-AVATAR-IMG { WIDTH: 40PX; HEIGHT: 40PX; BORDER-RADIUS: 50%; OBJECT-FIT: COVER; }
+.C-AVATAR-DEF { WIDTH: 40PX; HEIGHT: 40PX; BORDER-RADIUS: 50%; BACKGROUND: #333; COLOR: #FFF; DISPLAY: FLEX; ALIGN-ITEMS: CENTER; JUSTIFY-CONTENT: CENTER; FONT-WEIGHT: BOLD; }
+.C-META { DISPLAY: FLEX; FLEX-DIRECTION: COLUMN; JUSTIFY-CONTENT: CENTER; }
+.C-NAME { COLOR: #FFF; FONT-WEIGHT: 600; FONT-SIZE: 0.95REM; DISPLAY: FLEX; ALIGN-ITEMS: CENTER; GAP: 8PX; }
+.C-DATE { COLOR: #666; FONT-SIZE: 0.75REM; }
+.C-BODY { COLOR: #CCC; FONT-SIZE: 0.9REM; LINE-HEIGHT: 1.5; WHITE-SPACE: PRE-WRAP; }
+.C-BADGE { FONT-SIZE: 0.65REM; PADDING: 2PX 6PX; BORDER-RADIUS: 4PX; FONT-WEIGHT: 800; }
+.C-BADGE.ADMIN { BACKGROUND: #7C3AED; COLOR: #FFF; }
+.C-BADGE.VIP { BACKGROUND: #FFD700; COLOR: #000; }
+.COMMENTS-LIST::-WEBKIT-SCROLLBAR { WIDTH: 5PX; }
+.COMMENTS-LIST::-WEBKIT-SCROLLBAR-THUMB { BACKGROUND: #333; BORDER-RADIUS: 10PX; }
 
 /* STYLE PLAYER SEPERTI SEBELUMNYA */
-.player-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: #1a1b20; padding: 12px 20px; border-radius: 0 0 16px 16px; margin-top: -5px; border-top: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-.toolbar-group { display: flex; align-items: center; gap: 8px; }
-.divider-vertical { width: 2px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 8px; border-radius: 2px; }
-.tool-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; transition: all 0.3s ease; font-size: 0.95rem; border-radius: 8px; font-weight: 500; }
-.tool-btn:hover { color: white; background: rgba(255,255,255,0.15); }
-.tool-select { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; outline: none; font-weight: 500; }
-.tool-select option { background: #1a1b20; color: #fff; }
-.btn-view:hover { background: rgba(0, 210, 255, 0.2); color: #00d2ff; border-color: #00d2ff; box-shadow: 0 0 10px rgba(0, 210, 255, 0.4); }
-.btn-view.active-view { background: #00d2ff; color: #000 !important; border-color: #00d2ff; font-weight: bold; box-shadow: 0 0 15px rgba(0, 210, 255, 0.6); }
-.btn-action.active-bookmark { background: #e50914; color: white !important; border: 1px solid #e50914; box-shadow: 0 0 15px rgba(229, 9, 20, 0.6); }
-.btn-danger:hover { background: rgba(255, 165, 0, 0.2); color: #ffa500; border-color: #ffa500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.4); }
-.badge-status { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
-.badge-status.status-vip { background: #ffd700; color: #000; border: 1px solid #eab308; }
-.badge-status.status-free { background: #22c55e; color: #fff; border: 1px solid #16a34a; }
-.badge-status.status-guest { background: #666; color: #fff; }
-.badge-status.status-lock { background: #ffd700; color: #000; border: 1px solid #eab308; }
-.badge-status.status-ok { background: #22c55e; color: #fff; border: 1px solid #16a34a; }
-.watched-indicator { margin-left: 12px; color: #4ade80; font-size: 1.2rem; display: none; }
-.eps-item.watched .watched-indicator { display: block !important; }
-.eps-item.watched .eps-name { color: #888; }
-.theater-bg { position:fixed; top:0; left:0; width:100%; height:100vh; background-size:cover; filter:blur(80px) brightness(0.3); z-index:-1; }
-.theater-container { display:grid; grid-template-columns:1fr 340px; gap:30px; max-width:1400px; margin:0 auto; padding:30px 20px; transition: 0.3s; }
-.theater-container.cinema-mode { grid-template-columns:1fr; }
-.theater-container.cinema-mode .playlist-wrapper { display:none; }
-.video-frame { position:relative; aspect-ratio:16/9; background:#000; border-radius:16px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); }
-.custom-video { width:100%; height:100%; }
-.loading-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:#000; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.spinner { width:40px; height:40px; border:4px solid rgba(255,255,255,0.1); border-left-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; }
-@keyframes spin { 100% { transform:rotate(360deg); } }
-.ad-player-slot { margin-top:15px; text-align:center; background:#0a0a0c; padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); }
-.ad-player-slot small { display:block; color:#444; font-size:0.7rem; margin-bottom:5px; letter-spacing:1px; }
-.player-nav-controls { display:flex; gap:15px; margin-top:20px; }
-.nav-btn { flex:1; padding:14px; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; font-weight:600; transition:0.3s; display:flex; align-items:center; justify-content:center; gap:10px; }
-.nav-btn:hover:not(:disabled) { background:var(--primary); border-color:var(--primary); }
-.nav-btn.disabled { opacity:0.3; cursor:not-allowed; }
-.video-info { margin-top:30px; }
-.drama-title { font-size:2rem; font-weight:800; margin-bottom:15px; line-height:1.2; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
-.meta-badges { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
-.meta-badges span { padding:5px 12px; border-radius:6px; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:5px; }
-.badge-server { background:var(--primary); color:white; }
-.badge-rating { background:#ffd700; color:#000; }
-.badge-info { background:rgba(255,255,255,0.1); color:#ccc; }
-.tags-container { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:25px; }
-.tag-pill { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:6px 16px; border-radius:50px; font-size:0.85rem; color:#ccc; text-decoration:none; transition:0.3s; }
-.tag-pill:hover { background:var(--primary); color:white; border-color:var(--primary); }
-.synopsis-box h3 { font-size:1.1rem; margin-bottom:10px; color:#fff; border-left:4px solid var(--primary); padding-left:10px; }
-.synopsis-box p { color:#ccc; line-height:1.7; font-size:1rem; }
-.playlist-wrapper { background:#151518; border-radius:16px; height:700px; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
-.playlist-header { padding:20px; background:rgba(0,0,0,0.2); border-bottom:1px solid rgba(255,255,255,0.05); }
-.ph-search { position:relative; margin-top:10px; }
-.ph-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#666; }
-.ph-search input { width:100%; background:#0a0a0c; border:1px solid rgba(255,255,255,0.1); padding:10px 10px 10px 35px; color:white; border-radius:8px; font-size:0.9rem; transition:0.3s; }
-.ph-search input:focus { border-color:var(--primary); outline:none; }
-.playlist-scroll { flex:1; overflow-y:auto; padding:10px; }
-.playlist-scroll::-webkit-scrollbar { width:5px; }
-.playlist-scroll::-webkit-scrollbar-thumb { background:#444; border-radius:10px; }
-.eps-item { display:flex; align-items:center; gap:15px; width:100%; background:transparent; border:none; padding:15px; color:#eee; cursor:pointer; text-align:left; border-radius:10px; transition:0.2s; margin-bottom:5px; border:1px solid transparent; }
-.eps-item:hover { background:rgba(255,255,255,0.05); }
-.eps-item.active { background:rgba(229,9,20,0.1); border-color:var(--primary); }
-.eps-num { font-family:monospace; font-size:1.1rem; color:#666; font-weight:bold; width:30px; }
-.active .eps-num { color:var(--primary); }
-.eps-name { font-weight:600; font-size:0.95rem; }
-.paywall-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; }
-.btn-upgrade { background:var(--primary); color:white; padding:12px 30px; border-radius:50px; text-decoration:none; margin-top:20px; display:inline-block; font-weight:bold; font-size:1rem; box-shadow:0 5px 20px rgba(229,9,20,0.4); }
-.btn-secondary { background: #333; color: white; padding: 12px 25px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 1rem; border: 1px solid rgba(255,255,255,0.2); transition: 0.3s; }
-.btn-secondary:hover { background: #555; }
-.skip-controls { display:flex; gap:5px; margin-right:5px; }
-.switch-toggle { display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; color:#fff; font-weight: 500; }
-.switch-toggle input { display:none; }
-.switch-toggle .slider { width:42px; height:24px; background:#333; border-radius:24px; position:relative; transition:0.3s; border: 2px solid #555; }
-.switch-toggle .slider:before { content:""; position:absolute; width:16px; height:16px; border-radius:50%; background:white; top:2px; left:2px; transition:0.3s; }
-.switch-toggle input:checked + .slider { background:#00d2ff; border-color: #00d2ff; }
-.switch-toggle input:checked + .slider:before { transform:translateX(18px); }
-@media(max-width:900px){ .theater-container{grid-template-columns:1fr;} .playlist-wrapper{height:500px;} }
-@media(max-width:600px){ .label-text { display:none; } .skip-controls { border:none; padding:0; margin:0; } .tool-btn { font-size:0.8rem; padding:8px; } .ad-player-slot { margin: 10px 0; padding: 10px; } .divider-vertical { display: none; } .comments-section { padding: 20px; margin-top: 20px; } }
-</style>
+.PLAYER-TOOLBAR { DISPLAY: FLEX; JUSTIFY-CONTENT: SPACE-BETWEEN; ALIGN-ITEMS: CENTER; FLEX-WRAP: WRAP; GAP: 15PX; BACKGROUND: #1A1B20; PADDING: 12PX 20PX; BORDER-RADIUS: 0 0 16PX 16PX; MARGIN-TOP: -5PX; BORDER-TOP: NONE; BOX-SHADOW: 0 5PX 15PX RGBA(0,0,0,0.3); }
+.TOOLBAR-GROUP { DISPLAY: FLEX; ALIGN-ITEMS: CENTER; GAP: 8PX; }
+.DIVIDER-VERTICAL { WIDTH: 2PX; HEIGHT: 24PX; BACKGROUND: RGBA(255,255,255,0.2); MARGIN: 0 8PX; BORDER-RADIUS: 2PX; }
+.TOOL-BTN { BACKGROUND: RGBA(255,255,255,0.08); BORDER: 1PX SOLID RGBA(255,255,255,0.1); COLOR: #FFF; CURSOR: POINTER; DISPLAY: INLINE-FLEX; ALIGN-ITEMS: CENTER; JUSTIFY-CONTENT: CENTER; GAP: 8PX; PADDING: 8PX 14PX; TRANSITION: ALL 0.3S EASE; FONT-SIZE: 0.95REM; BORDER-RADIUS: 8PX; FONT-WEIGHT: 500; }
+.TOOL-BTN:HOVER { COLOR: WHITE; BACKGROUND: RGBA(255,255,255,0.15); }
+.TOOL-SELECT { BACKGROUND: RGBA(255,255,255,0.08); BORDER: 1PX SOLID RGBA(255,255,255,0.1); COLOR: #FFF; PADDING: 8PX 12PX; BORDER-RADIUS: 8PX; CURSOR: POINTER; FONT-SIZE: 0.9REM; OUTLINE: NONE; FONT-WEIGHT: 500; }
+.TOOL-SELECT OPTION { BACKGROUND: #1A1B20; COLOR: #FFF; }
+.BTN-VIEW:HOVER { BACKGROUND: RGBA(0, 210, 255, 0.2); COLOR: #00D2FF; BORDER-COLOR: #00D2FF; BOX-SHADOW: 0 0 10PX RGBA(0, 210, 255, 0.4); }
+.BTN-VIEW.ACTIVE-VIEW { BACKGROUND: #00D2FF; COLOR: #000 !IMPORTANT; BORDER-COLOR: #00D2FF; FONT-WEIGHT: BOLD; BOX-SHADOW: 0 0 15PX RGBA(0, 210, 255, 0.6); }
+.BTN-ACTION.ACTIVE-BOOKMARK { BACKGROUND: #E50914; COLOR: WHITE !IMPORTANT; BORDER: 1PX SOLID #E50914; BOX-SHADOW: 0 0 15PX RGBA(229, 9, 20, 0.6); }
+.BTN-DANGER:HOVER { BACKGROUND: RGBA(255, 165, 0, 0.2); COLOR: #FFA500; BORDER-COLOR: #FFA500; BOX-SHADOW: 0 0 10PX RGBA(255, 165, 0, 0.4); }
+.BADGE-STATUS { PADDING: 4PX 10PX; BORDER-RADIUS: 6PX; FONT-SIZE: 0.7REM; FONT-WEIGHT: 800; TEXT-TRANSFORM: UPPERCASE; DISPLAY: INLINE-FLEX; ALIGN-ITEMS: CENTER; GAP: 5PX; MARGIN-LEFT: AUTO; }
+.BADGE-STATUS.STATUS-VIP { BACKGROUND: #FFD700; COLOR: #000; BORDER: 1PX SOLID #EAB308; }
+.BADGE-STATUS.STATUS-FREE { BACKGROUND: #22C55E; COLOR: #FFF; BORDER: 1PX SOLID #16A34A; }
+.BADGE-STATUS.STATUS-GUEST { BACKGROUND: #666; COLOR: #FFF; }
+.BADGE-STATUS.STATUS-LOCK { BACKGROUND: #FFD700; COLOR: #000; BORDER: 1PX SOLID #EAB308; }
+.BADGE-STATUS.STATUS-OK { BACKGROUND: #22C55E; COLOR: #FFF; BORDER: 1PX SOLID #16A34A; }
+.WATCHED-INDICATOR { MARGIN-LEFT: 12PX; COLOR: #4ADE80; FONT-SIZE: 1.2REM; DISPLAY: NONE; }
+.EPS-ITEM.WATCHED .WATCHED-INDICATOR { DISPLAY: BLOCK !IMPORTANT; }
+.EPS-ITEM.WATCHED .EPS-NAME { COLOR: #888; }
+.THEATER-BG { POSITION:FIXED; TOP:0; LEFT:0; WIDTH:100%; HEIGHT:100VH; BACKGROUND-SIZE:COVER; FILTER:BLUR(80PX) BRIGHTNESS(0.3); Z-INDEX:-1; }
+.THEATER-CONTAINER { DISPLAY:GRID; GRID-TEMPLATE-COLUMNS:1FR 340PX; GAP:30PX; MAX-WIDTH:1400PX; MARGIN:0 AUTO; PADDING:30PX 20PX; TRANSITION: 0.3S; }
+.THEATER-CONTAINER.CINEMA-MODE { GRID-TEMPLATE-COLUMNS:1FR; }
+.THEATER-CONTAINER.CINEMA-MODE .PLAYLIST-WRAPPER { DISPLAY:NONE; }
+.VIDEO-FRAME { POSITION:RELATIVE; ASPECT-RATIO:16/9; BACKGROUND:#000; BORDER-RADIUS:16PX; OVERFLOW:HIDDEN; BOX-SHADOW:0 20PX 50PX RGBA(0,0,0,0.5); BORDER:1PX SOLID RGBA(255,255,255,0.1); }
+.CUSTOM-VIDEO { WIDTH:100%; HEIGHT:100%; }
+.LOADING-OVERLAY { POSITION:ABSOLUTE; TOP:0; LEFT:0; WIDTH:100%; HEIGHT:100%; BACKGROUND:#000; Z-INDEX:5; DISPLAY:FLEX; FLEX-DIRECTION:COLUMN; ALIGN-ITEMS:CENTER; JUSTIFY-CONTENT:CENTER; }
+.SPINNER { WIDTH:40PX; HEIGHT:40PX; BORDER:4PX SOLID RGBA(255,255,255,0.1); BORDER-LEFT-COLOR:VAR(--PRIMARY); BORDER-RADIUS:50%; ANIMATION:SPIN 1S LINEAR INFINITE; }
+@KEYFRAMES SPIN { 100% { TRANSFORM:ROTATE(360DEG); } }
+.AD-PLAYER-SLOT { MARGIN-TOP:15PX; TEXT-ALIGN:CENTER; BACKGROUND:#0A0A0C; PADDING:15PX; BORDER-RADIUS:12PX; BORDER:1PX SOLID RGBA(255,255,255,0.05); }
+.AD-PLAYER-SLOT SMALL { DISPLAY:BLOCK; COLOR:#444; FONT-SIZE:0.7REM; MARGIN-BOTTOM:5PX; LETTER-SPACING:1PX; }
+.PLAYER-NAV-CONTROLS { DISPLAY:FLEX; GAP:15PX; MARGIN-TOP:20PX; }
+.NAV-BTN { FLEX:1; PADDING:14PX; BACKGROUND:RGBA(255,255,255,0.05); COLOR:WHITE; BORDER:1PX SOLID RGBA(255,255,255,0.1); BORDER-RADIUS:10PX; CURSOR:POINTER; FONT-WEIGHT:600; TRANSITION:0.3S; DISPLAY:FLEX; ALIGN-ITEMS:CENTER; JUSTIFY-CONTENT:CENTER; GAP:10PX; }
+.NAV-BTN:HOVER:NOT(:DISABLED) { BACKGROUND:VAR(--PRIMARY); BORDER-COLOR:VAR(--PRIMARY); }
+.NAV-BTN.DISABLED { OPACITY:0.3; CURSOR:NOT-ALLOWED; }
+.VIDEO-INFO { MARGIN-TOP:30PX; }
+.DRAMA-TITLE { FONT-SIZE:2REM; FONT-WEIGHT:800; MARGIN-BOTTOM:15PX; LINE-HEIGHT:1.2; TEXT-SHADOW:0 2PX 10PX RGBA(0,0,0,0.5); }
+.META-BADGES { DISPLAY:FLEX; GAP:10PX; FLEX-WRAP:WRAP; MARGIN-BOTTOM:20PX; }
+.META-BADGES SPAN { PADDING:5PX 12PX; BORDER-RADIUS:6PX; FONT-SIZE:0.8REM; FONT-WEIGHT:600; DISPLAY:INLINE-FLEX; ALIGN-ITEMS:CENTER; GAP:5PX; }
+.BADGE-SERVER { BACKGROUND:VAR(--PRIMARY); COLOR:WHITE; }
+.BADGE-RATING { BACKGROUND:#FFD700; COLOR:#000; }
+.BADGE-INFO { BACKGROUND:RGBA(255,255,255,0.1); COLOR:#CCC; }
+.TAGS-CONTAINER { DISPLAY:FLEX; GAP:8PX; FLEX-WRAP:WRAP; MARGIN-BOTTOM:25PX; }
+.TAG-PILL { BACKGROUND:RGBA(255,255,255,0.05); BORDER:1PX SOLID RGBA(255,255,255,0.1); PADDING:6PX 16PX; BORDER-RADIUS:50PX; FONT-SIZE:0.85REM; COLOR:#CCC; TEXT-DECORATION:NONE; TRANSITION:0.3S; }
+.TAG-PILL:HOVER { BACKGROUND:VAR(--PRIMARY); COLOR:WHITE; BORDER-COLOR:VAR(--PRIMARY); }
+.SYNOPSIS-BOX H3 { FONT-SIZE:1.1REM; MARGIN-BOTTOM:10PX; COLOR:#FFF; BORDER-LEFT:4PX SOLID VAR(--PRIMARY); PADDING-LEFT:10PX; }
+.SYNOPSIS-BOX P { COLOR:#CCC; LINE-HEIGHT:1.7; FONT-SIZE:1REM; }
+.PLAYLIST-WRAPPER { BACKGROUND:#151518; BORDER-RADIUS:16PX; HEIGHT:700PX; DISPLAY:FLEX; FLEX-DIRECTION:COLUMN; BORDER:1PX SOLID RGBA(255,255,255,0.1); OVERFLOW:HIDDEN; }
+.PLAYLIST-HEADER { PADDING:20PX; BACKGROUND:RGBA(0,0,0,0.2); BORDER-BOTTOM:1PX SOLID RGBA(255,255,255,0.05); }
+.PH-SEARCH { POSITION:RELATIVE; MARGIN-TOP:10PX; }
+.PH-SEARCH I { POSITION:ABSOLUTE; LEFT:12PX; TOP:50%; TRANSFORM:TRANSLATEY(-50%); COLOR:#666; }
+.PH-SEARCH INPUT { WIDTH:100%; BACKGROUND:#0A0A0C; BORDER:1PX SOLID RGBA(255,255,255,0.1); PADDING:10PX 10PX 10PX 35PX; COLOR:WHITE; BORDER-RADIUS:8PX; FONT-SIZE:0.9REM; TRANSITION:0.3S; }
+.PH-SEARCH INPUT:FOCUS { BORDER-COLOR:VAR(--PRIMARY); OUTLINE:NONE; }
+.PLAYLIST-SCROLL { FLEX:1; OVERFLOW-Y:AUTO; PADDING:10PX; }
+.PLAYLIST-SCROLL::-WEBKIT-SCROLLBAR { WIDTH:5PX; }
+.PLAYLIST-SCROLL::-WEBKIT-SCROLLBAR-THUMB { BACKGROUND:#444; BORDER-RADIUS:10PX; }
+.EPS-ITEM { DISPLAY:FLEX; ALIGN-ITEMS:CENTER; GAP:15PX; WIDTH:100%; BACKGROUND:TRANSPARENT; BORDER:NONE; PADDING:15PX; COLOR:#EEE; CURSOR:POINTER; TEXT-ALIGN:LEFT; BORDER-RADIUS:10PX; TRANSITION:0.2S; MARGIN-BOTTOM:5PX; BORDER:1PX SOLID TRANSPARENT; }
+.EPS-ITEM:HOVER { BACKGROUND:RGBA(255,255,255,0.05); }
+.EPS-ITEM.ACTIVE { BACKGROUND:RGBA(229,9,20,0.1); BORDER-COLOR:VAR(--PRIMARY); }
+.EPS-NUM { FONT-FAMILY:MONOSPACE; FONT-SIZE:1.1REM; COLOR:#666; FONT-WEIGHT:BOLD; WIDTH:30PX; }
+.ACTIVE .EPS-NUM { COLOR:VAR(--PRIMARY); }
+.EPS-NAME { FONT-WEIGHT:600; FONT-SIZE:0.95REM; }
+.PAYWALL-OVERLAY { POSITION:ABSOLUTE; TOP:0; LEFT:0; WIDTH:100%; HEIGHT:100%; BACKGROUND:RGBA(0,0,0,0.95); DISPLAY:FLEX; FLEX-DIRECTION:COLUMN; ALIGN-ITEMS:CENTER; JUSTIFY-CONTENT:CENTER; Z-INDEX:10; }
+.BTN-UPGRADE { BACKGROUND:VAR(--PRIMARY); COLOR:WHITE; PADDING:12PX 30PX; BORDER-RADIUS:50PX; TEXT-DECORATION:NONE; MARGIN-TOP:20PX; DISPLAY:INLINE-BLOCK; FONT-WEIGHT:BOLD; FONT-SIZE:1REM; BOX-SHADOW:0 5PX 20PX RGBA(229,9,20,0.4); }
+.BTN-SECONDARY { BACKGROUND: #333; COLOR: WHITE; PADDING: 12PX 25PX; BORDER-RADIUS: 50PX; TEXT-DECORATION: NONE; DISPLAY: INLINE-BLOCK; FONT-WEIGHT: BOLD; FONT-SIZE: 1REM; BORDER: 1PX SOLID RGBA(255,255,255,0.2); TRANSITION: 0.3S; }
+.BTN-SECONDARY:HOVER { BACKGROUND: #555; }
+.SKIP-CONTROLS { DISPLAY:FLEX; GAP:5PX; MARGIN-RIGHT:5PX; }
+.SWITCH-TOGGLE { DISPLAY:FLEX; ALIGN-ITEMS:CENTER; GAP:10PX; CURSOR:POINTER; FONT-SIZE:0.9REM; COLOR:#FFF; FONT-WEIGHT: 500; }
+.SWITCH-TOGGLE INPUT { DISPLAY:NONE; }
+.SWITCH-TOGGLE .SLIDER { WIDTH:42PX; HEIGHT:24PX; BACKGROUND:#333; BORDER-RADIUS:24PX; POSITION:RELATIVE; TRANSITION:0.3S; BORDER: 2PX SOLID #555; }
+.SWITCH-TOGGLE .SLIDER:BEFORE { CONTENT:""; POSITION:ABSOLUTE; WIDTH:16PX; HEIGHT:16PX; BORDER-RADIUS:50%; BACKGROUND:WHITE; TOP:2PX; LEFT:2PX; TRANSITION:0.3S; }
+.SWITCH-TOGGLE INPUT:CHECKED + .SLIDER { BACKGROUND:#00D2FF; BORDER-COLOR: #00D2FF; }
+.SWITCH-TOGGLE INPUT:CHECKED + .SLIDER:BEFORE { TRANSFORM:TRANSLATEX(18PX); }
+@MEDIA(MAX-WIDTH:900PX){ .THEATER-CONTAINER{GRID-TEMPLATE-COLUMNS:1FR;} .PLAYLIST-WRAPPER{HEIGHT:500PX;} }
+@MEDIA(MAX-WIDTH:600PX){ .LABEL-TEXT { DISPLAY:NONE; } .SKIP-CONTROLS { BORDER:NONE; PADDING:0; MARGIN:0; } .TOOL-BTN { FONT-SIZE:0.8REM; PADDING:8PX; } .AD-PLAYER-SLOT { MARGIN: 10PX 0; PADDING: 10PX; } .DIVIDER-VERTICAL { DISPLAY: NONE; } .COMMENTS-SECTION { PADDING: 20PX; MARGIN-TOP: 20PX; } }
+</STYLE>
+
+<SCRIPT TYPE="APPLICATION/LD+JSON">
+{
+  "@CONTEXT": "HTTPS://SCHEMA.ORG",
+  "@TYPE": "TVSERIES",
+  "NAME": "<?= HTMLSPECIALCHARS($TITLE) ?>",
+  "IMAGE": "<?= HTMLSPECIALCHARS($COVER) ?>",
+  "DESCRIPTION": "<?= HTMLSPECIALCHARS(STRIP_TAGS($INTRO)) ?>",
+  "AGGREGATERATING": {
+    "@TYPE": "AGGREGATERATING",
+    "RATINGVALUE": "<?= $RATING ?>",
+    "BESTRATING": "10",
+    "RATINGCOUNT": "<?= $VIEWS ?>"
+  },
+  "POTENTIALACTION": {
+    "@TYPE": "WATCHACTION",
+    "TARGET": "<?= (ISSET($_SERVER['HTTPS']) ? "HTTPS" : "HTTP") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]" ?>"
+  }
+}
+</SCRIPT>
