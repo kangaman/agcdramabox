@@ -16,7 +16,6 @@ $urlCover = isset($_GET['cover']) ? urldecode($_GET['cover']) : '';
 $title = !empty($urlTitle) ? $urlTitle : ($info['bookName'] ?? $info['title'] ?? 'Nonton Drama');
 $rawCover = !empty($urlCover) ? $urlCover : ($info['cover'] ?? $info['thumbnail'] ?? '');
 
-// Fix Image
 if (strpos($rawCover, '.heic') !== false) {
     $cleanUrl = str_replace(['http://', 'https://'], '', $rawCover);
     $cover = 'https://wsrv.nl/?url=' . urlencode($cleanUrl) . '&output=jpg&q=80';
@@ -29,16 +28,28 @@ $rating = $info['score'] ?? '5.0';
 $views = number_format($info['followCount'] ?? $info['read_count'] ?? 0);
 $tags = $info['tags'] ?? $info['stat_infos'] ?? [];
 
-// 2. AUTHENTICATION
+// 2. AUTHENTICATION & LIMITS
 require_once 'app/Auth.php';
 $auth = new Auth();
+$isLoggedIn = isset($_SESSION['user_id']); // Cek apakah user sudah login
 $isVip = $auth->isVip();
-$freeLimit = 5; 
 $urlId = $_GET['id'] ?? '';
+
+// --- LOGIKA PEMBATASAN EPISODE ---
+if ($isVip) {
+    $episodeLimit = 99999; // VIP: Unlimited
+    $userStatus = 'vip';
+} elseif ($isLoggedIn) {
+    $episodeLimit = 20;    // Free User: Max 20 Eps
+    $userStatus = 'free';
+} else {
+    $episodeLimit = 10;    // Guest: Max 10 Eps
+    $userStatus = 'guest';
+}
 
 // 3. HISTORY SYNC
 $lastEpDB = 0;
-if (isset($_SESSION['user_id']) && $urlId) {
+if ($isLoggedIn && $urlId) {
     $db = (new Database())->getConnection();
     $stmt = $db->prepare("SELECT episode FROM history WHERE user_id = ? AND book_id = ?");
     $stmt->execute([$_SESSION['user_id'], $urlId]);
@@ -66,9 +77,11 @@ global $webConfig;
             <div id="playerOverlay" class="paywall-overlay" style="display: none;">
                 <div class="paywall-content">
                     <i id="overlayIcon" class="ri-lock-2-fill icon-lock"></i>
-                    <h2 id="overlayTitle">Konten Premium</h2>
+                    <h2 id="overlayTitle">Konten Terkunci</h2>
                     <p id="overlayDesc">Upgrade VIP untuk melanjutkan.</p>
+                    
                     <div id="overlayButtons" class="paywall-actions">
+                        <a href="/login" id="btnLoginOverlay" class="btn-secondary" style="display:none; margin-right:10px;">Login Gratis</a>
                         <a href="/dashboard/billing" class="btn-upgrade">Beli VIP</a>
                     </div>
                 </div>
@@ -146,6 +159,14 @@ global $webConfig;
                 <span class="badge-rating"><i class="ri-star-fill"></i> <?= $rating ?></span>
                 <span class="badge-info"><i class="ri-eye-line"></i> <?= $views ?></span>
                 <span class="badge-info"><i class="ri-film-line"></i> <?= count($chapters) ?> Eps</span>
+                
+                <?php if($isVip): ?>
+                    <span class="badge-status status-vip">AKUN VIP</span>
+                <?php elseif($isLoggedIn): ?>
+                    <span class="badge-status status-free">AKUN FREE (Limit 20 Eps)</span>
+                <?php else: ?>
+                    <span class="badge-status status-guest" style="background:#666; color:white; border:1px solid #888;">GUEST (Limit 10 Eps)</span>
+                <?php endif; ?>
             </div>
             
             <?php if(!empty($tags)): ?>
@@ -175,7 +196,10 @@ global $webConfig;
             <?php if(!empty($chapters)): ?>
                 <?php foreach($chapters as $idx => $chap): 
                     $num = $idx + 1;
-                    $isLocked = !$isVip && ($num > $freeLimit);
+                    
+                    // --- LOGIKA KUNCI ---
+                    $isLocked = ($num > $episodeLimit); // Terkunci jika melebihi batas tipe user
+                    
                     $vidId = ($source === 'melolo') ? ($chap['vid'] ?? $chap['id'] ?? '') : '';
                     $videoUrl = ($source !== 'melolo') ? ($chap['mp4'] ?? $chap['url'] ?? '') : '';
                     $hasLink = !empty($vidId) || !empty($videoUrl);
@@ -191,7 +215,7 @@ global $webConfig;
                     <div class="eps-details">
                         <span class="eps-name">Episode <?= $num ?></span>
                         <span class="badge-status <?= $isLocked ? 'status-vip' : 'status-free' ?>">
-                            <?= $isLocked ? '<i class="ri-lock-fill"></i> VIP' : '<i class="ri-play-circle-line"></i> GRATIS' ?>
+                            <?= $isLocked ? '<i class="ri-lock-fill"></i> TERKUNCI' : '<i class="ri-play-circle-line"></i> GRATIS' ?>
                         </span>
                     </div>
 
@@ -202,7 +226,7 @@ global $webConfig;
                 </button>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div style="padding:40px 20px; text-align:center; color:#666;">Belum ada episode.</div>
+                <div style="padding:40px 20px; text-align:center; color:#666;">Episode belum tersedia.</div>
             <?php endif; ?>
         </div>
     </div>
@@ -216,7 +240,8 @@ var dramaTitle = '<?= addslashes($title) ?>';
 var lastEpServer = <?= intval($lastEpDB) ?>; 
 var dramaCover = '<?= addslashes($cover) ?>';
 var totalEps = <?= count($chapters) ?>;
-var isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+var isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+var userStatus = '<?= $userStatus ?>'; // guest | free | vip
 
 var video = document.getElementById('mainPlayer');
 var hls = null;
@@ -248,6 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
     currentEpNum = epsNum;
 
+    // Reset UI
     document.getElementById('loadingSpinner').style.display = 'flex';
     document.getElementById('playerOverlay').style.display = 'none';
     document.querySelectorAll('.eps-item').forEach(b => b.classList.remove('active'));
@@ -263,8 +289,26 @@ function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
 
     var resumeTime = localStorage.getItem('resume_' + dramaId + '_' + epsNum);
 
-    if (isLocked) { showOverlay('ri-vip-crown-2-fill', '#ffd700', 'Konten Premium', 'Upgrade VIP untuk melanjutkan.', true); return; }
-    if (!hasLink) { showOverlay('ri-file-shred-line', '#666', 'Belum Tersedia', 'Episode belum rilis.', false); return; }
+    // --- HANDLE KONDISI TERKUNCI ---
+    if (isLocked) { 
+        let title = 'Konten Terkunci';
+        let desc = 'Upgrade VIP untuk melanjutkan.';
+        let showLoginBtn = false;
+
+        if (userStatus === 'guest') {
+            title = 'Batas Akses Tamu';
+            desc = 'Anda mencapai batas 10 Episode. Login untuk nonton sampai Ep 20, atau Beli VIP untuk akses penuh.';
+            showLoginBtn = true;
+        } else if (userStatus === 'free') {
+            title = 'Batas Akses Free';
+            desc = 'Jatah 20 Episode gratis habis. Silakan beli paket VIP murah meriah!';
+        }
+
+        showOverlay('ri-lock-star-fill', '#ffd700', title, desc, true, showLoginBtn);
+        return; 
+    }
+
+    if (!hasLink) { showOverlay('ri-file-shred-line', '#666', 'Belum Tersedia', 'Episode belum rilis.', false, false); return; }
 
     if (currentSource === 'melolo' && vidId) {
         fetch(`/index.php?page=api_get_stream&source=melolo&id=${vidId}`)
@@ -275,10 +319,10 @@ function playEpisode(directUrl, vidId, isLocked, hasLink, btn, epsNum) {
                     if (streamUrl.startsWith('http://')) streamUrl = streamUrl.replace('http://', 'https://');
                     loadVideo(streamUrl, resumeTime);
                 } else {
-                    showOverlay('ri-error-warning-line', '#ff4757', 'Gagal', 'Video error.', false);
+                    showOverlay('ri-error-warning-line', '#ff4757', 'Gagal', 'Video error.', false, false);
                 }
             })
-            .catch(() => showOverlay('ri-wifi-off-line', '#ff4757', 'Error', 'Gagal koneksi.', false));
+            .catch(() => showOverlay('ri-wifi-off-line', '#ff4757', 'Error', 'Gagal koneksi.', false, false));
     } else {
         loadVideo(directUrl, resumeTime);
     }
@@ -351,21 +395,16 @@ video.addEventListener('ended', function() { if(document.getElementById('autoNex
 function skipTime(s) { video.currentTime += s; }
 function changeSpeed(el) { video.playbackRate = parseFloat(el.value); }
 
-// --- CINEMA MODE TOGGLE ---
 function toggleCinema() { 
     document.getElementById('theaterContainer').classList.toggle('cinema-mode'); 
     document.getElementById('btnCinema').classList.toggle('active-view'); 
 }
-
-function toggleFullscreen() {
-    if (!document.fullscreenElement) { video.requestFullscreen(); } else { document.exitFullscreen(); }
-}
+function toggleFullscreen() { if (!document.fullscreenElement) { video.requestFullscreen(); } else { document.exitFullscreen(); } }
 function togglePip() { if (document.pictureInPictureElement) { document.exitPictureInPicture(); } else if (document.pictureInPictureEnabled) { video.requestPictureInPicture(); } }
 
 function navEpisode(dir) { var cur = document.querySelector('.eps-item.active'); if(!cur) return; var target = dir===1 ? cur.nextElementSibling : cur.previousElementSibling; if(target) target.click(); }
 function updateNavButtons(btn) { document.getElementById('btnPrev').disabled = !btn.previousElementSibling; document.getElementById('btnNext').disabled = !btn.nextElementSibling; }
 
-// BOOKMARK SYSTEM
 function toggleBookmark() {
     let b = JSON.parse(localStorage.getItem('my_bookmarks') || '[]');
     const idx = b.findIndex(x => x.id === dramaId);
@@ -385,7 +424,6 @@ function checkBookmark() {
     const btn = document.getElementById('btnBookmark');
     const icon = btn.querySelector('i');
     const label = btn.querySelector('.label-text');
-    
     if (b.find(x => x.id === dramaId)) { 
         btn.classList.add('active-bookmark'); 
         icon.className = 'ri-bookmark-fill'; 
@@ -397,83 +435,50 @@ function checkBookmark() {
     }
 }
 
-function showOverlay(icon, col, title, desc, btn) { 
+// FUNGSI OVERLAY LEBIH CERDAS
+function showOverlay(icon, col, title, desc, showVipBtn, showLoginBtn) { 
     var ov = document.getElementById('playerOverlay'); video.style.display = 'none'; video.pause(); ov.style.display = 'flex'; 
     document.getElementById('overlayIcon').className = icon; document.getElementById('overlayIcon').style.color = col; 
     document.getElementById('overlayTitle').innerText = title; document.getElementById('overlayDesc').innerText = desc; 
-    document.getElementById('overlayButtons').style.display = btn ? 'block' : 'none'; 
+    document.getElementById('overlayButtons').style.display = 'block'; 
+    
+    // Toggle tombol spesifik
+    var btnLogin = document.getElementById('btnLoginOverlay');
+    var btnVip = document.querySelector('.btn-upgrade');
+    
+    if(btnLogin) btnLogin.style.display = showLoginBtn ? 'inline-block' : 'none';
+    if(btnVip) btnVip.style.display = showVipBtn ? 'inline-block' : 'none';
+
     document.getElementById('loadingSpinner').style.display = 'none'; 
 }
+
 function filterEpisodes() { var v = document.getElementById('epsSearch').value.toLowerCase(); document.querySelectorAll('.eps-item').forEach(el => { var t = el.innerText.toLowerCase(); el.style.display = t.includes(v) ? "" : "none"; }); }
 function reportVideo() { if(confirm("Lapor video rusak?")) window.open(`https://t.me/jejakintel?text=${encodeURIComponent('Lapor Error: '+dramaTitle+' Ep '+currentEpNum)}`, '_blank'); }
 </script>
 
 <style>
-/* --- MODIFIKASI TOTAL TOOLBAR (High Contrast & Colorful) --- */
-
-/* 1. Container Toolbar */
-.player-toolbar {
-    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
-    background: #1a1b20; /* Latar belakang sedikit lebih terang dari hitam pekat */
-    padding: 12px 20px; border-radius: 0 0 16px 16px; margin-top: -5px;
-    border-top: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+/* CSS Update untuk Tombol Login di Overlay */
+.btn-secondary {
+    background: #333; color: white; padding: 12px 25px; border-radius: 50px; text-decoration: none; display: inline-block; font-weight: bold; font-size: 1rem;
+    border: 1px solid rgba(255,255,255,0.2); transition: 0.3s;
 }
+.btn-secondary:hover { background: #555; }
+
+/* CSS Toolbar & Lainnya TETAP SAMA seperti sebelumnya */
+.player-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: #1a1b20; padding: 12px 20px; border-radius: 0 0 16px 16px; margin-top: -5px; border: 1px solid rgba(255,255,255,0.1); border-top: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 .toolbar-group { display: flex; align-items: center; gap: 8px; }
-
-/* 2. Pemisah Vertikal yang Jelas */
 .divider-vertical { width: 2px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 8px; border-radius: 2px; }
-
-/* 3. Gaya Dasar Tombol (Putih Terang & Berlatar) */
-.tool-btn {
-    background: rgba(255,255,255,0.08); /* Latar belakang transparan halus */
-    border: 1px solid rgba(255,255,255,0.1); /* Border halus */
-    color: #fff; /* Teks Putih Terang */
-    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 8px 14px; transition: all 0.3s ease; font-size: 0.95rem; border-radius: 8px; font-weight: 500;
-}
-.tool-btn i { font-size: 1.1rem; }
-
-/* 4. Gaya Select Speed */
-.tool-select { 
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); 
-    color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; outline: none; font-weight: 500;
-}
+.tool-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; transition: all 0.3s ease; font-size: 0.95rem; border-radius: 8px; font-weight: 500; }
+.tool-btn:hover { color: white; background: rgba(255,255,255,0.08); }
+.tool-select { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; outline: none; font-weight: 500; }
 .tool-select option { background: #1a1b20; color: #fff; }
 .tool-select:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
-
-
-/* --- IDENTITAS WARNA TOMBOL --- */
-
-/* A. Tombol Kontrol Netral (Skip) */
 .btn-control:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); }
-
-/* B. Tombol View Mode (Cinema, PiP, Fullscreen) - BIRU NEON */
-.btn-view:hover { 
-    background: rgba(0, 210, 255, 0.2); color: #00d2ff; border-color: #00d2ff; 
-    box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
-}
-.btn-view.active-view { /* Khusus Cinema saat aktif */
-    background: #00d2ff; color: #000 !important; border-color: #00d2ff; font-weight: bold;
-    box-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
-}
-
-/* C. Tombol Simpan (Bookmark) - MERAH BERAPI */
+.btn-view:hover { background: rgba(0, 210, 255, 0.2); color: #00d2ff; border-color: #00d2ff; box-shadow: 0 0 10px rgba(0, 210, 255, 0.4); }
+.btn-view.active-view { background: #00d2ff; color: #000 !important; border-color: #00d2ff; font-weight: bold; box-shadow: 0 0 15px rgba(0, 210, 255, 0.6); }
 .btn-action:hover { background: rgba(229, 9, 20, 0.2); color: #ff4757; border-color: #ff4757; }
-.btn-action.active-bookmark {
-    background: #e50914; /* Merah Solid */
-    color: white !important; 
-    border: 1px solid #e50914; 
-    box-shadow: 0 0 15px rgba(229, 9, 20, 0.6); /* Glow Merah */
-}
-
-/* D. Tombol Lapor (Warning) - ORANYE */
-.btn-danger:hover { 
-    background: rgba(255, 165, 0, 0.2); color: #ffa500; border-color: #ffa500; 
-    box-shadow: 0 0 10px rgba(255, 165, 0, 0.4);
-}
-
-
-/* --- SKINS LAINNYA (Switch, dll) --- */
+.btn-action.active-bookmark { background: #e50914; color: white !important; border: 1px solid #e50914; box-shadow: 0 0 15px rgba(229, 9, 20, 0.6); }
+.btn-danger:hover { background: rgba(255, 165, 0, 0.2); color: #ffa500; border-color: #ffa500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.4); }
 .skip-controls { display:flex; gap:5px; margin-right:5px; }
 .switch-toggle { display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; color:#fff; font-weight: 500; }
 .switch-toggle input { display:none; }
@@ -481,16 +486,12 @@ function reportVideo() { if(confirm("Lapor video rusak?")) window.open(`https://
 .switch-toggle .slider:before { content:""; position:absolute; width:16px; height:16px; border-radius:50%; background:white; top:2px; left:2px; transition:0.3s; }
 .switch-toggle input:checked + .slider { background:#00d2ff; border-color: #00d2ff; }
 .switch-toggle input:checked + .slider:before { transform:translateX(18px); }
-
-/* BADGE STATUS */
 .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
 .badge-status.status-vip { background: #ffd700; color: #000; border: 1px solid #eab308; box-shadow: 0 0 8px rgba(255, 215, 0, 0.3); }
 .badge-status.status-free { background: #22c55e; color: #fff; border: 1px solid #16a34a; }
 .watched-indicator { margin-left: 12px; color: #4ade80; font-size: 1.2rem; display: none; }
 .eps-item.watched .watched-indicator { display: block !important; }
 .eps-item.watched .eps-name { color: #888; }
-
-/* Base Styles */
 .theater-bg { position:fixed; top:0; left:0; width:100%; height:100vh; background-size:cover; filter:blur(80px) brightness(0.3); z-index:-1; }
 .theater-container { display:grid; grid-template-columns:1fr 340px; gap:30px; max-width:1400px; margin:0 auto; padding:30px 20px; transition: 0.3s; }
 .theater-container.cinema-mode { grid-template-columns:1fr; }
